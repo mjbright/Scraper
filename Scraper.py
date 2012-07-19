@@ -421,9 +421,13 @@ def parse_page(url, entry, DIR):
 
     body = soup.body
 
+    if (body == None):
+        return ""
+
     ############################################################
     ## Try first root_div_class, root_div_id entries if present:
 
+    root_div_class = None
     if ('root_div_class' in entry):
         root_div_class = entry.get('root_div_class')
         print "Getting content from root_div_class='" + root_div_class + "'"
@@ -441,6 +445,7 @@ def parse_page(url, entry, DIR):
                 entry['root_div_id'] = root_div_class
             #raise
 
+    root_div_id = None
     if ('root_div_id' in entry):
         root_div_id = entry.get('root_div_id')
         print "Getting content from root_div_id='" + root_div_id + "'"
@@ -699,8 +704,9 @@ def diff_pages(entries, NEW_DIR, OLD_DIR):
         try:
             page = diff_page(classId, url, entry, NEW_DIR, OLD_DIR)
         except:
-            error = "ERROR: on diff_page("+url+")" + str(sys.exc_info()[0])
-            #print "ERROR:: on diff_page("+url+")", sys.exc_info()[0]
+            #error = "ERROR: on diff_page("+url+")" + str(sys.exc_info()[0])
+            error = "ERROR: on diff_page("+url+")" + traceback.format_exc()
+            #print "ERROR: on diff_page("+url+")", sys.exc_info()[0]
             print error
 
             full_error= "<pre>" + traceback.format_exc() + "</pre>"
@@ -816,7 +822,9 @@ def diff_page(classId, url, entry, NEW_DIR, OLD_DIR):
         raise
         #return ""
 
+    print "   diff("+str(len(old_lines))+" old bytes vs. "+str(len(new_lines))+" new bytes)"
     diff = difflib.unified_diff(old_lines.split("\n"), new_lines.split("\n"))
+    #print "   ==> "+str(len(diff))+" bytes different"
 
     show_new_only=True
     show_new_only=False
@@ -866,6 +874,8 @@ def diff_page(classId, url, entry, NEW_DIR, OLD_DIR):
             # Print new/modified/"old context" lines:
             page_diffs = page_diffs + d + "\n";
             #print d
+
+    print "   ==> "+str(len(page_diffs))+" NEW bytes different"
 
     if (page_diffs == ""):
         return ""
