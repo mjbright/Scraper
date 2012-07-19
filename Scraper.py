@@ -12,6 +12,7 @@ from bs4 import BeautifulSoup
 import re
 
 import requests,sys,os
+import traceback
 
 import difflib
 
@@ -68,12 +69,12 @@ periods = dict({
 ################################################################################
 # E-mail config:
 
-SEND_TO = '<SEND_TO_ADDRESS>'
+SEND_TO = 'scraper@mjbright.net'
 
-SENDER = '<SENDER_ADDRESS>'
+SENDER = 'scraper_cron@mjbright.net'
 SENDER_NAME = 'Scraper'
 
-SMTP_HOST='<SMTP_HOST>'
+SMTP_HOST='smtp.free.fr'
 
 SEND_MAIL_MIN_BYTES=10
 
@@ -224,7 +225,12 @@ def mkdirp(directory):
 
 def main_sendmail( entry, to, body, select_entries, category, period, name):
 
-    body_bytes = len(body)
+    try:
+        body_bytes = len(body)
+    except:
+        body=""
+        body_bytes = 0
+
     if (body_bytes < SEND_MAIL_MIN_BYTES):
         print "**** Not sending mail as num bytes="+str(body_bytes)+"< min("+str(SEND_MAIL_MIN_BYTES)+") [" + name + "]"
         
@@ -334,13 +340,13 @@ def get_page(url, DOWNLOAD_DIR):
             print "URL Error"
 
     except:
-        print "Unexpected error:", sys.exc_info()[0]
+        print "ERROR: in get_page:", sys.exc_info()[0]
         #raise
 
     try:
         check_file_not_gzipped(op_file)
     except:
-        print "Failed gzip checking - Unexpected error:", sys.exc_info()[0]
+        print "ERROR: in get_page - failed gzip checking - ", sys.exc_info()[0]
 
     #except urllib2.Error as e:
             #print "urllib2.Error: " + e.fp.read()
@@ -405,7 +411,7 @@ def parse_page(url, entry, DIR):
     try:
         soup = BeautifulSoup(open(file))
     except:
-        print "!!!!!!!! Failed to parse html file: " + file
+        print "ERROR: Failed to parse html file: " + file
         return '<br> Failed to parse ' + file + '\n' + ''.join(open(file).readlines())
 
     try:
@@ -429,7 +435,7 @@ def parse_page(url, entry, DIR):
             writeFile(file + ".div_class.selection", str(contents))
             return contents
         except:
-            print "!!!!!!!! Failed to find div_class <" + root_div_class + ">"
+            print "ERROR: Failed to find div_class <" + root_div_class + ">"
             if (not 'root_div_id' in entry):
                 print "Trying as 'root_div_id'"
                 entry['root_div_id'] = root_div_class
@@ -446,7 +452,7 @@ def parse_page(url, entry, DIR):
             writeFile(file + ".div_id.selection", str(contents))
             return contents
         except:
-            print "!!!!!!!! Failed to find div_id <" + root_div_id + ">"
+            print "ERROR: Failed to find div_id <" + root_div_id + ">"
             #raise
 
     ############################################################
@@ -462,7 +468,7 @@ def parse_page(url, entry, DIR):
             writeFile(file + ".div_class.selection", str(contents))
             return contents
         except:
-            print "!!!!!!!! Failed to find div_class <" + root_div_class + ">"
+            print "ERROR: Failed to find div_class <" + root_div_class + ">"
             #raise
 
 
@@ -476,7 +482,7 @@ def parse_page(url, entry, DIR):
             writeFile(file + ".div_id.selection", str(contents))
             return contents
         except:
-            print "!!!!!!!! Failed to find div_id <" + root_div_id + ">"
+            print "ERROR: Failed to find div_id <" + root_div_id + ">"
             #raise
 
     ############################################################
@@ -625,8 +631,7 @@ def writeFile(filename, text):
             file.write(text)
 
     except:
-        print "Unexpected error:", sys.exc_info()[0]
-        print "!!!!!!!! Failed to write file"
+        print "ERROR: in writeFile("+filename+"):", sys.exc_info()[0]
         raise
 
 ################################################################################
@@ -685,10 +690,13 @@ def diff_pages(entries, NEW_DIR, OLD_DIR):
         try:
             page = diff_page(classId, url, entry, NEW_DIR, OLD_DIR)
         except:
-            error = "Unexpected error: on diff_page("+url+")" + str(sys.exc_info()[0])
-            #print "Unexpected error: on diff_page("+url+")", sys.exc_info()[0]
+            error = "ERROR: on diff_page("+url+")" + str(sys.exc_info()[0])
+            #print "ERROR:: on diff_page("+url+")", sys.exc_info()[0]
             print error
-            main_sendmail( entry, [ SEND_TO ], error, select_entries, category, period, "ERROR: " + name)
+
+            full_error= "<pre>" + traceback.format_exc() + "</pre>"
+
+            main_sendmail( entry, [ SEND_TO ], full_error, select_entries, category, period, "ERROR: " + name)
 
         if ((page != "") and SEND_MAIL_INDIVIDUAL):
             #body = ''.join(lines.readlines())
@@ -761,19 +769,25 @@ def showlist(entries):
 def diff_page(classId, url, entry, NEW_DIR, OLD_DIR):
     global itemno
 
-    old_lines = parse_page(url, entry, OLD_DIR)
+    try:
+        old_lines = parse_page(url, entry, OLD_DIR)
+    except:
+        print "ERROR: Failed to parse_page(OLD page)"
+        raise
+
     try:
         old_lines = str(old_lines) # to UTF-8
     except:
-        print "!!!!!!!! Failed to str(OLD page)"
-        raise
+        print "ERROR: Failed to str(OLD page)"
+        old_lines = ""
+        #raise
         #return ""
 
     try:
         old_lines = ''.join(old_lines)
         old_lines = old_lines.decode("utf8")
     except:
-        print "!!!!!!!! Failed to decode OLD page to 'utf8'"
+        print "ERROR: Failed to decode OLD page to 'utf8'"
         raise
         #return ""
 
@@ -781,7 +795,7 @@ def diff_page(classId, url, entry, NEW_DIR, OLD_DIR):
     try:
         new_lines = str(new_lines) # to UTF-8
     except:
-        print "!!!!!!!! Failed to str(NEW page)"
+        print "ERROR: Failed to str(NEW page)"
         raise
         #return ""
 
@@ -789,7 +803,7 @@ def diff_page(classId, url, entry, NEW_DIR, OLD_DIR):
         new_lines = ''.join(new_lines)
         new_lines = new_lines.decode("utf8")
     except:
-        print "!!!!!!!! Failed to decode NEW page to 'utf8'"
+        print "ERROR: Failed to decode NEW page to 'utf8'"
         raise
         #return ""
 
