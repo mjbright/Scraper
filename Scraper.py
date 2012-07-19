@@ -566,12 +566,13 @@ def readUrlList(filename):
             if p_end.match(file_line):
                 break
 
-            #if (url == None):
+            if (url == None):
+                continue
                 #print "No url defined for entry"+str(entry_no)+" ending at line "+str(line_no)
                 #exit(-1)
 
             if (url in entries):
-                print "Entry alread defined for url <"+url+"> in entry"+str(entry_no)+" ending at line "+str(line_no)
+                print "Entry already defined for url <"+url+"> in entry"+str(entry_no)+" ending at line "+str(line_no)
                 exit(-1)
 
             debug("Adding entry#"+str(entry_no))
