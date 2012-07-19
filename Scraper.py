@@ -526,6 +526,9 @@ def readUrlList(filename):
     empty_match='^\s*$'
     p_empty = re.compile(empty_match)
 
+    comment_match='^\s*#'
+    p_comment = re.compile(comment_match)
+
     end_match='^__END__$'
     p_end = re.compile(end_match)
 
@@ -543,6 +546,11 @@ def readUrlList(filename):
     for file_line in file_lines:
         line_no = line_no+1
         debug("LINE"+str(line_no)+": "+file_line)
+
+        ########################################
+        ## Skip comment lines:
+        if p_comment.match(file_line):
+            continue
 
         ########################################
         ## Empty lines delimit entries:
