@@ -303,7 +303,7 @@ def sendmail(to, headers, body, subject="Scraper", sender=SENDER_EMAIL, sender_n
        smtpObj.sendmail(sender, to, message)
        print "**** Successfully sent email" + by + " " + subject
 
-    except SMTPException:
+    except smtplib.SMTPException:
        print "**** Error: unable to send email" + by + " " + subject
 
 ################################################################################
@@ -548,11 +548,32 @@ def parse_page(url, entry, DIR):
     ############################################################
     ## Try first root_div_class, root_div_id entries if present:
 
+    for key in entry:
+        if (key[0:5] == "root_"):
+            attr_val=entry[key]
+
+            parts=key.split("_")
+            tag=parts[1]
+            attr=parts[2]
+            
+            try:
+                print "0. TRY "+tag+" "+attr+" "+attr_val
+                return get_subtree_from_html(file, body, tag, attr, attr_val)
+            except:
+                if (attr == "class"):
+                    attr="id"
+
+                try:
+                    print "0(id). TRY "+tag+" "+attr+" "+attr_val
+                    return get_subtree_from_html(file, body, tag, attr, attr_val)
+                except:
+                    pass
+
     root_div_class = None
     if ('root_div_class' in entry):
         root_div_class = entry.get('root_div_class')
         try:
-            print "1. TRY div class " + root_div_class
+            print "1. NEVER HERE ... TRY div class " + root_div_class
             return get_subtree_from_html(file, body, 'div', 'class', root_div_class)
         except:
             if (not 'root_div_id' in entry):
@@ -564,7 +585,7 @@ def parse_page(url, entry, DIR):
         root_div_id = entry.get('root_div_id')
 
         try:
-            print "2. TRY div id " + root_div_id
+            print "2. NEVER HERE ... TRY div id " + root_div_id
             return get_subtree_from_html(file, body, 'div', 'id', root_div_id)
         except:
             pass
@@ -758,6 +779,8 @@ def encode2Ascii(lines):
 
     #return lines.encode('ascii','ignore')
     text = unicodedata.normalize('NFKD', lines).encode('ascii','ignore')
+    return text
+
     ret = ''
     for i in range(0, len(text)):
         if (i % 2) == 0:
@@ -804,9 +827,15 @@ def diff_pages(entries, NEW_DIR, OLD_DIR):
 
         classId=getUrlId(url)
 
+        email_attrs=dict()
+        email_attrs['select_entries']=select_entries
+        email_attrs['category']=category
+        email_attrs['period']=period
+        email_attrs['name']=name
+
         page = ""
         try:
-            page = diff_page(classId, url, entry, NEW_DIR, OLD_DIR)
+            page = diff_page(classId, url, entry, NEW_DIR, OLD_DIR, email_attrs)
         except:
             #error = "ERROR: on diff_page("+url+")" + str(sys.exc_info()[0])
             error = "ERROR: on diff_page("+url+")" + traceback.format_exc()
@@ -820,12 +849,6 @@ def diff_pages(entries, NEW_DIR, OLD_DIR):
 
             if DEBUG_MODE:
                 main_sendmail( entry, [ SEND_TO ], full_error, select_entries, category, period, "ERROR: " + name)
-
-        if ((page != "") and SEND_MAIL_INDIVIDUAL):
-            #body = ''.join(lines.readlines())
-            body = page
-
-            main_sendmail( entry, [ SEND_TO ], body, select_entries, category, period, name)
 
         diff_pages = diff_pages + page
 
@@ -887,10 +910,41 @@ def showlist(entries):
     print ""
 
 ################################################################################
-# def diff_page(classId, url, entry, NEW_DIR, OLD_DIR):
+# def diff_page(classId, url, entry, NEW_DIR, OLD_DIR, email_attrs):
 
-def diff_page(classId, url, entry, NEW_DIR, OLD_DIR):
+def diff_page(classId, url, entry, NEW_DIR, OLD_DIR, email_attrs):
     global itemno
+
+    new_lines = parse_page(url, entry, NEW_DIR)
+    try:
+        new_lines = str(new_lines) # to UTF-8
+    except:
+        print "ERROR: Failed to str(NEW page)"
+        raise
+        #return ""
+
+    try:
+        new_lines = ''.join(new_lines)
+        new_lines = new_lines.decode("utf8")
+    except:
+        print "ERROR: Failed to decode NEW page to 'utf8'"
+        raise
+        #return ""
+
+    if ((new_lines != "") and SEND_MAIL_INDIVIDUAL):
+        #body = ''.join(lines.readlines())
+        #body = new_lines
+        body = encode2Ascii(new_lines)
+
+        if (('action' in entry) and (entry['action']  == "email_selection")):
+            print "email_selection"
+
+            select_entries=email_attrs['select_entries']
+            category=email_attrs['category']
+            period=email_attrs['period']
+            name=email_attrs['name']
+            main_sendmail( entry, [ SEND_TO ], body, select_entries, category, period, "SELECT: " + name)
+            return ""
 
     try:
         old_lines = parse_page(url, entry, OLD_DIR)
@@ -914,22 +968,6 @@ def diff_page(classId, url, entry, NEW_DIR, OLD_DIR):
         raise
         #return ""
 
-    new_lines = parse_page(url, entry, NEW_DIR)
-    try:
-        new_lines = str(new_lines) # to UTF-8
-    except:
-        print "ERROR: Failed to str(NEW page)"
-        raise
-        #return ""
-
-    try:
-        new_lines = ''.join(new_lines)
-        new_lines = new_lines.decode("utf8")
-    except:
-        print "ERROR: Failed to decode NEW page to 'utf8'"
-        raise
-        #return ""
-
     
     file = NEW_DIR + "/" + createFileName(url) + ".new.prediff"
     writeFile(file, encode2Ascii(new_lines))
@@ -944,13 +982,11 @@ def diff_page(classId, url, entry, NEW_DIR, OLD_DIR):
         try:
             file = NEW_DIR + "/" + createFileName(url) + ".diff"
             print "Writing diff file: " + file
-            diff_text = ' '.join(list(diff_text))
-            print "diff_text len="+str(len(diff_text))
-            diff_text = encode2Ascii(diff_text)
-            print "diff_text len="+str(len(diff_text))
-            ## diff_text = str(diff_text)
-            ## print "diff_text len="+str(len(diff_text))
-            writeFile(file, diff_text)
+            debug_diff_text = ' '.join(list(diff_text))
+            print "debug_diff_text len="+str(len(debug_diff_text))
+            debug_diff_text = encode2Ascii(debug_diff_text)
+            print "debug_diff_text len="+str(len(debug_diff_text))
+            writeFile(file, debug_diff_text)
         except:
             print "ERROR: failed to write diff file: " + traceback.format_exc()
 
@@ -1008,7 +1044,28 @@ def diff_page(classId, url, entry, NEW_DIR, OLD_DIR):
     if (page_diffs == ""):
         return ""
 
+    if DEBUG_MODE:
+        try:
+            file = NEW_DIR + "/" + createFileName(url) + ".diff.NEW"
+            print "Writing diff file: " + file
+            debug_page_diffs = ' '.join(list(page_diffs))
+            print "debug_page_diffs len="+str(len(debug_page_diffs))
+            debug_page_diffs = encode2Ascii(debug_page_diffs)
+            print "debug_page_diffs len="+str(len(debug_page_diffs))
+            writeFile(file, debug_page_diffs)
+        except:
+            print "ERROR: failed to write diff file: " + traceback.format_exc()
     page_diffs = div_page_diffs + page_diffs + "</div><<br/> <!-- "+classId+"-->\n\n"
+
+    if ((page_diffs != "") and SEND_MAIL_INDIVIDUAL):
+        #body = ''.join(lines.readlines())
+        body = page_diffs
+
+        select_entries=email_attrs['select_entries']
+        category=email_attrs['category']
+        period=email_attrs['period']
+        name=email_attrs['name']
+        main_sendmail( entry, [ SEND_TO ], body, select_entries, category, period, name)
 
     return page_diffs
 
