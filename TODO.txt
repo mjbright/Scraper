@@ -1,0 +1,76 @@
+
+TODO:
+
+   NEXT:
+
+    action: (default action 'email_diff', other 'email_selection')
+    mailfrom:
+    mailto:
+    subject::
+
+    Reflect on "GROUPS" => "SCRAPE_RUN_ID"
+    Update on github.com
+    exclude: tag
+    remove images??
+    minbytes and minbytes: tag
+    make find_all for root_div_* => more general (tag, attribute, value) and recursive check ...
+
+   link-only mode: linkOnly:True -> detect change, provide link (as changedetection.com)
+
+   Move sendmail_INDIVIDUAL into diff_page, move Prev/Next to return value, not included in INDIV mail 
+
+   GLOBAL mails:
+      - Add index to o/p ...
+      - with fwd links and stats (num lines / delta lines)
+      -  Implement Prev/Next
+      - Divider markers allowing ctrl-F searching
+      - Show category markers allowing ctrl-F searching
+
+   Add categories / select by category / order by category
+      -daily_general
+      -daily_linux
+      -daily_rpi
+      -...
+   Option to send e-mail by site, e-mail by category
+   Develop options in full list
+
+   Accept gzip
+
+   METHOD:
+     - get Latest Page => save to file
+     - parse Page / extract section => save to file
+     - diff against old section
+     - include new text of diff against old section
+
+   Create HTML(only HTML?) pages of changed content
+
+   E-Mail HTML page, or link to page, with
+     - reduced size images (or css/js to do this?)
+     - text-only (based on MODE)
+     - "include" changes as change segments (how? js/jquery?)
+         - grouped changes by date change? by category?
+         - ability to hide/delete content
+         - keep change log by category/url/...
+
+   Move to OpenShift
+     - cron
+
+
+   Tags:
+       when:     When to check ...
+       actions:  MAIL?, MAIL_LINK, GROUP, ...
+       login:    ???? salted sha1 password hash
+       diff:     text, html(, xml?)
+       format:   General page format - text, html, Blogger, WordPress, ...
+       blogperday: Updates frequency (for Blogs to know if diffs are worthwhile)
+                     e.g. Engadget   => blogperday: 10
+                     e.g. Infrequent => blogperday: 0.1
+       rootid:   tag id to be used as content root (else all document)
+       filterids:tag ids to be used to filter content
+       category: general category for sorting entries
+       group:    specific category for grouping and sorting entries
+       images:   none small tiny local remote
+
+
+
+
