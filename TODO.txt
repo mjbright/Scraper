@@ -2,17 +2,21 @@
 TODO:
 
    NEXT:
+    Complete README.md file with usage/install/configuration instructions
+        Create an INSTALL.txt file
 
-    action: (default action 'email_diff', other 'email_selection')
-    mailfrom:
-    mailto:
-    subject::
+    NEW TAGS in file list:
+        action: (default action 'email_diff', other 'email_selection')
+        mailfrom:
+        mailto:
+        subject:
+        exclude:
+        remove images??
+        minbytes:
+        root_<tag>_<attrib>: <attrib_val>
 
     Reflect on "GROUPS" => "SCRAPE_RUN_ID"
-    Update on github.com
-    exclude: tag
-    remove images??
-    minbytes and minbytes: tag
+
     make find_all for root_div_* => more general (tag, attribute, value) and recursive check ...
 
    link-only mode: linkOnly:True -> detect change, provide link (as changedetection.com)

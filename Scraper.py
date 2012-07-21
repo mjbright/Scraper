@@ -17,6 +17,7 @@ import traceback
 import difflib
 
 import datetime
+from datetime import date, timedelta
 
 # Used for stripping HTML tags:
 from HTMLParser import HTMLParser
@@ -24,9 +25,16 @@ from HTMLParser import HTMLParser
 # Used for converting unicode to ASCII (??):
 import unicodedata
 
+## Import Scraper config from this Python module
+from Scraper_config import Scraper_config
+
 ################################################################################
 
 itemno=0
+
+DEBUG_MODE=False
+
+SAVE_ERRORS=list()
 
 ################################################################################
 # Entry filtering
@@ -69,17 +77,24 @@ periods = dict({
 ################################################################################
 # E-mail config:
 
-SEND_TO = 'scraper@mjbright.net'
+for key in {'SEND_TO', 'SENDER_EMAIL', 'SENDER_NAME', 'SMTP_HOST', 'SEND_MAIL_MIN_BYTES',
+            'SEND_MAIL_INDIVIDUAL', 'SEND_MAIL_GLOBAL',
+            'SEND_ERROR_MAIL_INDIVIDUAL', 'SEND_ERROR_MAIL_GLOBAL',
+            'SEND_MAIL_SUMMARY'}:
+    if (not key in Scraper_config):
+        print "Entry for config item '" + key + "' is missing from Scraper_config"
+        exit(255)
 
-SENDER = 'scraper_cron@mjbright.net'
-SENDER_NAME = 'Scraper'
-
-SMTP_HOST='smtp.free.fr'
-
-SEND_MAIL_MIN_BYTES=10
-
-SEND_MAIL_INDIVIDUAL=True
-SEND_MAIL_GLOBAL=False
+SEND_TO = Scraper_config['SEND_TO']
+SENDER_EMAIL = Scraper_config['SENDER_EMAIL']
+SENDER_NAME = Scraper_config['SENDER_NAME']
+SMTP_HOST = Scraper_config['SMTP_HOST']
+SEND_MAIL_MIN_BYTES = Scraper_config['SEND_MAIL_MIN_BYTES']
+SEND_MAIL_INDIVIDUAL = Scraper_config['SEND_MAIL_INDIVIDUAL']
+SEND_MAIL_GLOBAL = Scraper_config['SEND_MAIL_GLOBAL']
+SEND_ERROR_MAIL_INDIVIDUAL = Scraper_config['SEND_ERROR_MAIL_INDIVIDUAL']
+SEND_ERROR_MAIL_GLOBAL = Scraper_config['SEND_ERROR_MAIL_GLOBAL']
+SEND_MAIL_SUMMARY = Scraper_config['SEND_MAIL_SUMMARY']
 
 ################################################################################
 # Configure User-Agents:
@@ -97,15 +112,21 @@ CACHE=HOME + "/var/SCRAPER-CACHE/"
 
 LATEST=CACHE + "LATEST"
 
-#DATE=datetime.datetime.now().strftime('%a %b %d %H:%M:%S %Z %G')
-DATE=datetime.datetime.now().strftime('%G_%B_%d')
-DATETIME=datetime.datetime.now().strftime('%G_%B_%d_%Hh%Mm%S')
 #From <mail_notification@saas.com> Tue Jun 12 23:00:07 CEST 2012
+#DATE=datetime.datetime.now().strftime('%a %b %d %H:%M:%S %Z %G')
+
+FMT_DATE='%G_%B_%d'
+FMT_DATEHOUR='%G_%B_%d_%Hh'
+FMT_DATETIME='%G_%B_%d_%Hh%Mm%S'
+
+DATE=datetime.datetime.now().strftime(FMT_DATE)
+DATEHOUR=datetime.datetime.now().strftime(FMT_DATEHOUR)
+DATETIME=datetime.datetime.now().strftime(FMT_DATETIME)
+
+print "Programe started at: " + DATETIME
 
 if (not os.path.exists(CACHE)):
     os.makedirs(CACHE)
-
-NOW=  CACHE + DATETIME
 
 ################################################################################
 # debug(line):
@@ -117,6 +138,12 @@ debug_readUrlList=debug_flag
 def debug(line):
     if (debug_flag):
         print "DEBUG: "+line
+
+###############################################################################
+# def getTimeString(tdelta, FMT):
+
+def getTimeString(tdelta, FMT):
+    return (date.today() + tdelta).strftime(FMT)
 
 ################################################################################
 # def filterSortEntries(entries, select_entries, category):
@@ -258,9 +285,9 @@ def main_sendmail( entry, to, body, select_entries, category, period, name):
     sendmail( to, headers, body, subject)
 
 ################################################################################
-# def sendmail(to, headers, body, subject="Scraper", sender=SENDER, sender_name=SENDER_NAME):
+# def sendmail(to, headers, body, subject="Scraper", sender=SENDER_EMAIL, sender_name=SENDER_NAME):
 
-def sendmail(to, headers, body, subject="Scraper", sender=SENDER, sender_name=SENDER_NAME):
+def sendmail(to, headers, body, subject="Scraper", sender=SENDER_EMAIL, sender_name=SENDER_NAME):
 
     message = "From: " + sender_name + " <"+sender+">\n" + "To: " + to[0] + "\nSubject: " + subject + "\n"
     for header in headers:
@@ -301,7 +328,6 @@ def check_file_not_gzipped(file):
 
         writeFile(file, content)
 
-
 ################################################################################
 # get_page(url, DOWNLOAD_DIR):
 
@@ -324,6 +350,11 @@ def get_page(url, DOWNLOAD_DIR):
           while True:
             chunk = req.read(CHUNK)
             if not chunk: break
+
+            #### # Strip chars > 128 (replace with space):
+            #### for i in range(0, len(chunk)):
+                #### if (ord(chunk[i]) > 128):
+                    #### chunk[i]=' '
             fp.write(chunk)
 
     except urllib2.HTTPError as e:
@@ -392,6 +423,89 @@ def parse_pages(entries, DIR):
         return parse_page(url, entry, DIR)
 
 ################################################################################
+# def get_subtree_from_html(file, html, tag, attribute_name, attribute_value):
+
+def get_subtree_from_html(file, html, tag, attribute_name, attribute_value):
+    value = None
+
+    entry_key = tag + "_" + attribute_name
+
+    search = "<" + tag + " " + attribute_name + "='" + attribute_value + "'>"
+
+    #print "Getting content from root " + entry_key + "='" + attribute_value +"'"
+    print "Getting content from root " + search + " tag"
+
+    try:
+        attrs=dict()
+        attrs[attribute_name]=attribute_value
+
+        print "main = html.find_all(" + tag + ",  attrs={" + attribute_name + " : " + attribute_value + "})"
+        main = html.find_all(tag, attrs)
+        if (len(main) > 1):
+            print "WARN: matched on more than 1 " + search + " tag"
+
+        if (len(main) == 0):
+            raise Exception("Not", " found")
+
+        #print repr(main)
+
+        contents=main[0].contents # Return contents of first match only
+
+        if DEBUG_MODE:
+            file = file + "." + entry_key + ".selection"
+            print "Writing selection file: " + file
+            writeFile(file, str(contents))
+
+        return contents
+
+    except:
+        print "ERROR: Failed to find root at " + search + " tag"
+        print traceback.format_exc()
+        raise
+
+################################################################################
+# def convert_unicode_to_string(x):
+
+#from django.utils import encoding
+
+def convert_unicode_to_string(x):
+    """
+    >>> convert_unicode_to_string(u'ni\xf1era')
+    'niera'
+    """
+    return encoding.smart_str(x, encoding='ascii', errors='ignore')
+
+################################################################################
+# def cleanText(text):
+
+def cleanText(text):
+
+    by=0
+    line=1
+    linepos=0
+    #return convert_unicode_to_string(text)
+    return encode2Ascii(text)
+
+    print "cleantext("+str(len(text))+" bytes)"
+
+    for byte in text:
+        by = by + 1
+        if (ord(byte) > 0xa):
+            line = line + 1
+            linepos=0
+            continue
+
+        linepos = linepos + 1
+        if (ord(byte) > 128):
+            hexstr=strformat("0x%x", ord(byte))
+            print "Found big number " + hexstr +" at by " + by + " at line"+line+"@"+linepos
+            byte=' '
+
+        text = text + byte
+
+    return text
+
+################################################################################
 # parse_page(url, entry, DIR):
 
 def parse_page(url, entry, DIR):
@@ -408,8 +522,15 @@ def parse_page(url, entry, DIR):
 
     print "--->parse_file(" + file + ")"
 
+    text = ''
+    f = open(file, "rb")
+    text = f.read(10000000) # 10 MBy !
+    text = encode2Ascii(text)
+    f.close()
+
     try:
-        soup = BeautifulSoup(open(file))
+        soup = BeautifulSoup(text)
+        #soup = BeautifulSoup(open(file))
     except:
         print "ERROR: Failed to parse html file: " + file
         return '<br> Failed to parse ' + file + '\n' + ''.join(open(file).readlines())
@@ -430,65 +551,42 @@ def parse_page(url, entry, DIR):
     root_div_class = None
     if ('root_div_class' in entry):
         root_div_class = entry.get('root_div_class')
-        print "Getting content from root_div_class='" + root_div_class + "'"
-
         try:
-            main = body.find_all("div", attrs={'class' : root_div_class})
-            contents=main[0].contents # Return contents of first match only
-
-            writeFile(file + ".div_class.selection", str(contents))
-            return contents
+            print "1. TRY div class " + root_div_class
+            return get_subtree_from_html(file, body, 'div', 'class', root_div_class)
         except:
-            print "ERROR: Failed to find div_class <" + root_div_class + ">"
             if (not 'root_div_id' in entry):
                 print "Trying as 'root_div_id'"
                 entry['root_div_id'] = root_div_class
-            #raise
 
     root_div_id = None
     if ('root_div_id' in entry):
         root_div_id = entry.get('root_div_id')
-        print "Getting content from root_div_id='" + root_div_id + "'"
 
         try:
-            main = body.find_all("div", attrs={'id' : root_div_id})
-            contents=main[0].contents # Return contents of first match only
-
-            writeFile(file + ".div_id.selection", str(contents))
-            return contents
+            print "2. TRY div id " + root_div_id
+            return get_subtree_from_html(file, body, 'div', 'id', root_div_id)
         except:
-            print "ERROR: Failed to find div_id <" + root_div_id + ">"
-            #raise
+            pass
 
     ############################################################
     ## Then try root_div_class, root_div_id as 'content':
 
-    if ((not root_div_class == 'content') and body.find_all("div", attrs={'class' : 'content'})):
-        print "Trying content from root_div_class='content'"
-        root_div_class='content'
+    if (not root_div_class == 'content'):
+        root_div_class = 'content'
         try:
-            main = body.find_all("div", attrs={'class' : root_div_class})
-            contents=main[0].contents # Return contents of first match only
-
-            writeFile(file + ".div_class.selection", str(contents))
-            return contents
+            print "3. TRY div class " + root_div_class
+            return get_subtree_from_html(file, body, 'div', 'class', root_div_class)
         except:
-            print "ERROR: Failed to find div_class <" + root_div_class + ">"
-            #raise
+            pass
 
-
-    if ((not root_div_id == 'content') and body.find_all("div", attrs={'id' : 'content'})):
-        print "Trying content from root_div_id='content'"
+    if (not root_div_id == 'content'):
         root_div_id='content'
         try:
-            main = body.find_all("div", attrs={'id' : root_div_id})
-            contents=main[0].contents # Return contents of first match only
-
-            writeFile(file + ".div_id.selection", str(contents))
-            return contents
+            print "4. TRY div id " + root_div_id
+            return get_subtree_from_html(file, body, 'div', 'id', root_div_id)
         except:
-            print "ERROR: Failed to find div_id <" + root_div_id + ">"
-            #raise
+            pass
 
     ############################################################
     ## Then try body
@@ -641,7 +739,7 @@ def writeFile(filename, text):
     """Write a file"""
 
     try:
-        with open(filename, 'w') as file:
+        with open(filename, 'wb') as file:
             file.write(text)
 
     except:
@@ -655,11 +753,17 @@ def encode2Ascii(lines):
     ret=""
 
     if (str(type(lines)) == "<type 'str'>"):
-        print "STR"
+        #print "STR"
         return lines
 
-    return lines.encode('ascii','ignore')
-    return unicodedata.normalize('NFKD', lines).encode('ascii','ignore')
+    #return lines.encode('ascii','ignore')
+    text = unicodedata.normalize('NFKD', lines).encode('ascii','ignore')
+    ret = ''
+    for i in range(0, len(text)):
+        if (i % 2) == 0:
+            ret = ret + text[i]
+
+    return ret;
 
     for char in lines:
         try:
@@ -706,12 +810,16 @@ def diff_pages(entries, NEW_DIR, OLD_DIR):
         except:
             #error = "ERROR: on diff_page("+url+")" + str(sys.exc_info()[0])
             error = "ERROR: on diff_page("+url+")" + traceback.format_exc()
+
             #print "ERROR: on diff_page("+url+")", sys.exc_info()[0]
             print error
 
             full_error= "<pre>" + traceback.format_exc() + "</pre>"
 
-            main_sendmail( entry, [ SEND_TO ], full_error, select_entries, category, period, "ERROR: " + name)
+            SAVE_ERRORS.append(full_error)
+
+            if DEBUG_MODE:
+                main_sendmail( entry, [ SEND_TO ], full_error, select_entries, category, period, "ERROR: " + name)
 
         if ((page != "") and SEND_MAIL_INDIVIDUAL):
             #body = ''.join(lines.readlines())
@@ -822,9 +930,29 @@ def diff_page(classId, url, entry, NEW_DIR, OLD_DIR):
         raise
         #return ""
 
+    
+    file = NEW_DIR + "/" + createFileName(url) + ".new.prediff"
+    writeFile(file, encode2Ascii(new_lines))
+    file = NEW_DIR + "/" + createFileName(url) + ".old.prediff"
+    writeFile(file, encode2Ascii(old_lines))
+
     print "   diff("+str(len(old_lines))+" old bytes vs. "+str(len(new_lines))+" new bytes)"
-    diff = difflib.unified_diff(old_lines.split("\n"), new_lines.split("\n"))
+    diff_text = difflib.unified_diff(old_lines.split("\n"), new_lines.split("\n"))
     #print "   ==> "+str(len(diff))+" bytes different"
+
+    if DEBUG_MODE:
+        try:
+            file = NEW_DIR + "/" + createFileName(url) + ".diff"
+            print "Writing diff file: " + file
+            diff_text = ' '.join(list(diff_text))
+            print "diff_text len="+str(len(diff_text))
+            diff_text = encode2Ascii(diff_text)
+            print "diff_text len="+str(len(diff_text))
+            ## diff_text = str(diff_text)
+            ## print "diff_text len="+str(len(diff_text))
+            writeFile(file, diff_text)
+        except:
+            print "ERROR: failed to write diff file: " + traceback.format_exc()
 
     show_new_only=True
     show_new_only=False
@@ -843,7 +971,7 @@ def diff_page(classId, url, entry, NEW_DIR, OLD_DIR):
 
     page_diffs = ""
 
-    for d in diff:
+    for d in diff_text:
         d = d.encode("utf8", "ignore")
 
         # Ignore initial '+++' line:
@@ -922,6 +1050,10 @@ while a < (len(args)-1):
     if opt == "-l":
         a=a+1
         ifile=args[a]
+        continue
+
+    if opt == "-debug":
+        DEBUG_MODE=True
         continue
 
     if opt == "-local":
@@ -1008,53 +1140,44 @@ while a < (len(args)-1):
 ################################################################################
 # MAIN:
 
-dirlink="UNKNOWN"
-dirlink_old="UNKNOWN"
+new_dir="UNKNOWN"
+old_dir="UNKNOWN"
 
 if period == HOUR:
-    NOW        =  CACHE + DATETIME
-    dirlink    = CACHE + "HOUR"
-    dirlink_old= CACHE + "HOUR_1"
-
+    new_dir     = CACHE + DATEHOUR
+    old_dir = CACHE + getTimeString(timedelta(hour=-1), FMT_DATEHOUR)
+ 
 if period == HOUR2:
-    NOW        =  CACHE + DATETIME
-    dirlink    = CACHE + "HOUR"
-    dirlink_old= CACHE + "HOUR_2"
+    new_dir     = CACHE + DATEHOUR
+    old_dir = CACHE + getTimeString(timedelta(hour=-2), FMT_DATEHOUR)
 
 if period == HOUR4:
-    NOW        =  CACHE + DATETIME
-    dirlink    = CACHE + "HOUR"
-    dirlink_old= CACHE + "HOUR_4"
+    new_dir     = CACHE + DATEHOUR
+    old_dir = CACHE + getTimeString(timedelta(hour=-4), FMT_DATEHOUR)
 
 if period == DAY:
-    NOW        =  CACHE + DATE
-    dirlink    = CACHE + "TODAY"
-    dirlink_old= CACHE + "TODAY_1"
+    new_dir     = CACHE + DATE
+    old_dir = CACHE + getTimeString(timedelta(days=-1), FMT_DATE)
 
 if period == DAY2:
-    NOW        =  CACHE + DATE
-    dirlink    = CACHE + "TODAY"
-    dirlink_old= CACHE + "TODAY_2"
+    new_dir     = CACHE + DATE
+    old_dir = CACHE + getTimeString(timedelta(days=-2), FMT_DATE)
 
 if period == WEEK:
-    NOW        =  CACHE + DATE
-    dirlink    = CACHE + "WEEK"
-    dirlink_old= CACHE + "WEEK_1"
+    new_dir     = CACHE + DATE
+    old_dir = CACHE + getTimeString(timedelta(days=-7), FMT_DATE)
 
 if period == WEEK2:
-    NOW        =  CACHE + DATE
-    dirlink    = CACHE + "WEEK"
-    dirlink_old= CACHE + "WEEK_2"
+    new_dir     = CACHE + DATE
+    old_dir = CACHE + getTimeString(timedelta(days=-14), FMT_DATE)
 
 if period == MONTH:
-    NOW        =  CACHE + DATE
-    dirlink    = CACHE + "MONTH"
-    dirlink_old= CACHE + "MONTH_1"
+    new_dir     = CACHE + DATE
+    old_dir = CACHE + getTimeString(timedelta(days=-30), FMT_DATE)
 
 if period == MONTH2:
-    NOW        =  CACHE + DATE
-    dirlink    = CACHE + "MONTH"
-    dirlink_old= CACHE + "MONTH_2"
+    new_dir     = CACHE + DATE
+    old_dir = CACHE + getTimeString(timedelta(days=-60), FMT_DATE)
 
 entries = readUrlList(ifile)
 
@@ -1071,35 +1194,26 @@ for oper in operations:
         showlist(entries)
 
     if (oper == "get_pages"):
-        if (not os.path.exists(NOW)):
-            print "os.makedirs("+NOW+")"
-            os.makedirs(NOW)
+        if (not os.path.exists(new_dir)):
+            print "os.makedirs("+new_dir+")"
+            os.makedirs(new_dir)
 
-        if (os.path.islink(dirlink_old)):
-            print "os.remove("+dirlink_old+")"
-            os.remove(dirlink_old)
-
-        if (os.path.islink(dirlink)):
-            #os.rmdir(dirlink)
-            print "os.rename("+dirlink+", "+dirlink_old+")"
-            os.rename(dirlink, dirlink_old)
-
-        print "os.symlink("+NOW+", "+dirlink+")"
-        os.symlink(NOW, dirlink)
-    
-        get_pages(entries, dirlink)
+        get_pages(entries, new_dir)
 
     if (oper == "parse_local"):
         parse_pages(entries, "PAGES")
 
     if (oper == "diff_page") or (oper == "DIFF_page"):
-        dir1=dirlink
-        dir0=dirlink_old
+        dir1=new_dir
+        dir0=old_dir
         if (oper == "DIFF_page"):
             dir1=DIR1
             dir0=DIR0
 
         diff_pages_op = diff_pages(entries, dir1, dir0)
+
+        if (len(SAVE_ERRORS) > 0):
+           SEND_MAIL_SUMMARY=True
 
         if (SEND_MAIL_GLOBAL):
             with open(ofile, 'w') as f:
@@ -1108,8 +1222,18 @@ for oper in operations:
             lines = open(ofile, 'r')
             #lines = strip_tags(lines)
 
-            body = ''.join(lines.readlines())
+            body=''
+            if SEND_MAIL_SUMMARY and (len(SAVE_ERRORS) > 0):
+                body = '<H1> Errors: </H1>' + ' '.join(SAVE_ERRORS) + '<br>'
+
+            body = body + ''.join(lines.readlines())
             main_sendmail( None, [ SEND_TO ], body, select_entries, category, period, "GLOBAL")
+
+        elif SEND_MAIL_SUMMARY and (len(SAVE_ERRORS) > 0):
+            body = '<H1> Errors: </H1>' + ' '.join(SAVE_ERRORS) + '<br>'
+
+            main_sendmail( None, [ SEND_TO ], body, select_entries, category, period, "SUMMARY")
+
 
 exit(0)
 
