@@ -1202,15 +1202,15 @@ old_dir="UNKNOWN"
 
 if period == HOUR:
     new_dir     = CACHE + DATEHOUR
-    old_dir = CACHE + getTimeString(timedelta(hour=-1), FMT_DATEHOUR)
+    old_dir = CACHE + getTimeString(timedelta(hours=-1), FMT_DATEHOUR)
  
 if period == HOUR2:
     new_dir     = CACHE + DATEHOUR
-    old_dir = CACHE + getTimeString(timedelta(hour=-2), FMT_DATEHOUR)
+    old_dir = CACHE + getTimeString(timedelta(hours=-2), FMT_DATEHOUR)
 
 if period == HOUR4:
     new_dir     = CACHE + DATEHOUR
-    old_dir = CACHE + getTimeString(timedelta(hour=-4), FMT_DATEHOUR)
+    old_dir = CACHE + getTimeString(timedelta(hours=-4), FMT_DATEHOUR)
 
 if period == DAY:
     new_dir     = CACHE + DATE
