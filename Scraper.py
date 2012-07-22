@@ -123,8 +123,6 @@ DATE=datetime.datetime.now().strftime(FMT_DATE)
 DATEHOUR=datetime.datetime.now().strftime(FMT_DATEHOUR)
 DATETIME=datetime.datetime.now().strftime(FMT_DATETIME)
 
-print "Programe started at: " + DATETIME
-
 if (not os.path.exists(CACHE)):
     os.makedirs(CACHE)
 
@@ -137,7 +135,7 @@ debug_readUrlList=debug_flag
 
 def debug(line):
     if (debug_flag):
-        print "DEBUG: "+line
+        print "DEBUG: " + line
 
 ###############################################################################
 # def getTimeString(tdelta, FMT):
@@ -186,6 +184,11 @@ def filterSortEntries(entries, select_entries, category):
                 continue
 
         filtered_entries[url]=entry
+
+    num_entries=len(entries)
+    num_filtered_entries=len(filtered_entries)
+    if (num_entries != num_filtered_entries):
+        print "filterEntries returned "+str(num_filtered_entries)+" from initial " + str(num_entries) + " entries"
 
     return filtered_entries
 
@@ -260,8 +263,9 @@ def main_sendmail( entry, to, body, select_entries, category, period, name):
 
     if (body_bytes < SEND_MAIL_MIN_BYTES):
         print "**** Not sending mail as num bytes="+str(body_bytes)+"< min("+str(SEND_MAIL_MIN_BYTES)+") [" + name + "]"
-        
         return
+    else:
+        print "**** Sending mail as num bytes="+str(body_bytes)+">= min("+str(SEND_MAIL_MIN_BYTES)+") [" + name + "]"
 
     if (entry != None):
         entry_info ="<br><h3>Entry info:</h3>\n"
@@ -270,7 +274,13 @@ def main_sendmail( entry, to, body, select_entries, category, period, name):
             
         body = entry_info + "<br><br>" + body
 
-    subject=name[:20]+'[' + periods.get(period) + ']: '
+        if ('mailto' in entry):
+            to = [ entry['mailto'] ]
+
+        if ('mailto+' in entry):
+            to.append( entry['mailto+'] )
+
+    subject='[' + periods.get(period) + ']: ' + name
 
     if (select_entries):
         subject = subject + '<' + select_entries + '> '
@@ -278,7 +288,7 @@ def main_sendmail( entry, to, body, select_entries, category, period, name):
     if (category):
         subject = subject + '[' + category + ']'
 
-    subject = subject + '[' + DATETIME + '] ' + name
+    subject = subject + '[' + DATEHOUR + '] '
 
     headers=[ 'MIME-Version: 1.0\n', 'Content-type: text/html\n' ]
     
@@ -289,7 +299,7 @@ def main_sendmail( entry, to, body, select_entries, category, period, name):
 
 def sendmail(to, headers, body, subject="Scraper", sender=SENDER_EMAIL, sender_name=SENDER_NAME):
 
-    message = "From: " + sender_name + " <"+sender+">\n" + "To: " + to[0] + "\nSubject: " + subject + "\n"
+    message = "From: " + sender_name + " <"+sender+">\n" + "To: " + ' '.join(to) + "\nSubject: " + subject + "\n"
     for header in headers:
         message = message + header
 
@@ -301,7 +311,7 @@ def sendmail(to, headers, body, subject="Scraper", sender=SENDER_EMAIL, sender_n
     try:
        smtpObj = smtplib.SMTP(SMTP_HOST)
        smtpObj.sendmail(sender, to, message)
-       print "**** Successfully sent email" + by + " " + subject
+       print "**** Sent email to <" + ' '.join(to) + "> " + by + " " + subject
 
     except smtplib.SMTPException:
        print "**** Error: unable to send email" + by + " " + subject
@@ -329,13 +339,10 @@ def check_file_not_gzipped(file):
         writeFile(file, content)
 
 ################################################################################
-# get_page(url, DOWNLOAD_DIR):
+# get_page(url, entry, DOWNLOAD_DIR):
 
-def get_page(url, DOWNLOAD_DIR):
-    op_file = DOWNLOAD_DIR + "/" + createFileName(url)
-
-    #with open(op_file, 'w') as f:
-    #f.write(urllib2.urlopen(url))
+def get_page(url, entry, DOWNLOAD_DIR):
+    op_file = DOWNLOAD_DIR + "/" + createFileName(url,entry)
 
     ua = UAs.get('ffox5') # TODO: browser-configurable
 
@@ -371,13 +378,13 @@ def get_page(url, DOWNLOAD_DIR):
             print "URL Error"
 
     except:
-        print "ERROR: in get_page:", sys.exc_info()[0]
+        print "ERROR: in get_page:" + traceback.format_exc()
         #raise
 
     try:
         check_file_not_gzipped(op_file)
     except:
-        print "ERROR: in get_page - failed gzip checking - ", sys.exc_info()[0]
+        print "ERROR: in get_page - failed gzip checking - " + traceback.format_exc()
 
     #except urllib2.Error as e:
             #print "urllib2.Error: " + e.fp.read()
@@ -392,14 +399,14 @@ def get_pages(entries, DOWNLOAD_DIR):
 
     for key in entries.iterkeys():
         url=key
-        value=entries[key]
-        name=value['name']
+        entry=entries[key]
+        name=entry['name']
         print "\nGET: " + name + " => <" + url + ">"
 
         try:
-            get_page(url, DOWNLOAD_DIR)
+            get_page(url, entry, DOWNLOAD_DIR)
         except:
-            print "\n**** UNCAUGHT EXCEPTION on get_page(): " + sys.exc_info()[0] + "\n"
+            print "\n**** UNCAUGHT EXCEPTION on get_page(): " + traceback.format_exc()
 
 ################################################################################
 # getUrlId(url):
@@ -510,7 +517,7 @@ def cleanText(text):
 
 def parse_page(url, entry, DIR):
     print "--->parse_page(" + url + ")"
-    file = DIR + "/" + createFileName(url)
+    file = DIR + "/" + createFileName(url,entry)
 
     if (not os.path.exists(file)):
         print "No such dir/file as '"+file+"'"
@@ -624,13 +631,21 @@ def parse_page(url, entry, DIR):
     #print repr(soup.prettify())
 
 ################################################################################
-# createFileName(url):
+# createFileName(url, entry):
 
-def createFileName(url):
+def createFileName(url, entry):
+
+    if ('filename_base' in entry):
+        return entry['filename_base']
+
     file = url
     file = file.replace("http://", "")
     file = file.replace("https://", "")
     file = file.replace("/", "_")
+    file = file.replace("?", "_")
+    file = file.replace("&", "_")
+
+    #return file[0:100]
     return file
 
 ################################################################################
@@ -764,7 +779,7 @@ def writeFile(filename, text):
             file.write(text)
 
     except:
-        print "ERROR: in writeFile("+filename+"):", sys.exc_info()[0]
+        print "ERROR: in writeFile("+filename+"):" + traceback.format_exc()
         raise
 
 ################################################################################
@@ -837,15 +852,13 @@ def diff_pages(entries, NEW_DIR, OLD_DIR):
         try:
             page = diff_page(classId, url, entry, NEW_DIR, OLD_DIR, email_attrs)
         except:
-            #error = "ERROR: on diff_page("+url+")" + str(sys.exc_info()[0])
             error = "ERROR: on diff_page("+url+")" + traceback.format_exc()
-
-            #print "ERROR: on diff_page("+url+")", sys.exc_info()[0]
             print error
 
             full_error= "<pre>" + traceback.format_exc() + "</pre>"
+            full_error_header="<b> Errors for '<u>"+name+"</u>'</b><br>"
 
-            SAVE_ERRORS.append(full_error)
+            SAVE_ERRORS.append(full_error_header+full_error)
 
             if DEBUG_MODE:
                 main_sendmail( entry, [ SEND_TO ], full_error, select_entries, category, period, "ERROR: " + name)
@@ -899,13 +912,15 @@ def substitute_local_links(d, url):
 
 def showlist(entries):
 
-    print "\nEntries: " + str(len(entries)) + " entries"
+    print "\nEntries: " + str(len(entries)) + " entries (filtered)"
 
     for key in entries.iterkeys():
         url=key
         value=entries[key]
         name=value['name']
         print name + " => <" + url + ">"
+
+    print "\nFinished list of " + str(len(entries)) + " entries (filtered)"
 
     print ""
 
@@ -969,9 +984,9 @@ def diff_page(classId, url, entry, NEW_DIR, OLD_DIR, email_attrs):
         #return ""
 
     
-    file = NEW_DIR + "/" + createFileName(url) + ".new.prediff"
+    file = NEW_DIR + "/" + createFileName(url,entry) + ".new.prediff"
     writeFile(file, encode2Ascii(new_lines))
-    file = NEW_DIR + "/" + createFileName(url) + ".old.prediff"
+    file = NEW_DIR + "/" + createFileName(url,entry) + ".old.prediff"
     writeFile(file, encode2Ascii(old_lines))
 
     print "   diff("+str(len(old_lines))+" old bytes vs. "+str(len(new_lines))+" new bytes)"
@@ -980,9 +995,10 @@ def diff_page(classId, url, entry, NEW_DIR, OLD_DIR, email_attrs):
 
     if DEBUG_MODE:
         try:
-            file = NEW_DIR + "/" + createFileName(url) + ".diff"
+            #### file = NEW_DIR + "/" + createFileName(url,entry) + ".diff"
             print "Writing diff file: " + file
-            debug_diff_text = ' '.join(list(diff_text))
+            debug_diff_text = diff_text[:] # Deepcopy !!
+            debug_diff_text = ' '.join(list(debug_diff_text))
             print "debug_diff_text len="+str(len(debug_diff_text))
             debug_diff_text = encode2Ascii(debug_diff_text)
             print "debug_diff_text len="+str(len(debug_diff_text))
@@ -994,9 +1010,9 @@ def diff_page(classId, url, entry, NEW_DIR, OLD_DIR, email_attrs):
     show_new_only=False
 
     div_page_diffs = "<hr>\n<div class id='"+classId+"'>\n"
-    if (itemno > 0):
-        item=str(itemno)
-        div_page_diffs = div_page_diffs + "<a href='#item_"+item+"'> Prev</a>\n"
+    ##if (itemno > 0):
+        ##item=str(itemno)
+        ##div_page_diffs = div_page_diffs + "<a href='#item_"+item+"'> Prev</a>\n"
     nextno=str(itemno+2)
     div_page_diffs = div_page_diffs + "<a href='#item_"+nextno+"'>Next</a>\n"
 
@@ -1046,9 +1062,10 @@ def diff_page(classId, url, entry, NEW_DIR, OLD_DIR, email_attrs):
 
     if DEBUG_MODE:
         try:
-            file = NEW_DIR + "/" + createFileName(url) + ".diff.NEW"
+            file = NEW_DIR + "/" + createFileName(url,entry) + ".diff.NEW"
             print "Writing diff file: " + file
-            debug_page_diffs = ' '.join(list(page_diffs))
+            debug_page_diffs = page_diffs[:] # Deepcopy !!
+            debug_page_diffs = ' '.join(list(debug_page_diffs))
             print "debug_page_diffs len="+str(len(debug_page_diffs))
             debug_page_diffs = encode2Ascii(debug_page_diffs)
             print "debug_page_diffs len="+str(len(debug_page_diffs))
@@ -1073,6 +1090,11 @@ def diff_page(classId, url, entry, NEW_DIR, OLD_DIR, email_attrs):
 # CMD-LINE ARGS:
 
 args=sys.argv
+
+print 80 * '_'
+print "Programe started at: " + DATETIME + " as:"
+print ' '.join(args)
+
 
 ifile='LIST.txt'
 
@@ -1238,12 +1260,7 @@ if period == MONTH2:
 
 entries = readUrlList(ifile)
 
-num_entries=len(entries)
 entries = filterSortEntries(entries, select_entries, category)
-num_entries_2=len(entries)
-
-#print "num_entries="+str(num_entries)
-#print "num_entries_2="+str(num_entries_2)
 
 for oper in operations:
 
