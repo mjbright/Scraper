@@ -61,16 +61,16 @@ MONTH=1000
 MONTH2=2000
 
 period=DAY
-periods = dict({
-    HOUR: 'HOUR',
-    HOUR2:  '2HOUR',
-    HOUR4:  '4HOUR',
-    DAY: 'DAY',
-    DAY2:  '2DAY',
-    WEEK: 'WEEK',
-    WEEK2:  '2WEEK',
-    MONTH: 'MONTH',
-    MONTH2:  '2MONTH',
+runids = dict({
+    HOUR:   'hour',
+    HOUR2:  '2hour',
+    HOUR4:  '4hour',
+    DAY:    'day',
+    DAY2:   '2day',
+    WEEK:   'week',
+    WEEK2:  '2week',
+    MONTH:  'month',
+    MONTH2: '2month',
 })
 
 
@@ -144,9 +144,9 @@ def getTimeString(tdelta, FMT):
     return (date.today() + tdelta).strftime(FMT)
 
 ################################################################################
-# def filterSortEntries(entries, select_entries, category):
+# def filterSortEntries(entries, select_entries, category, runid):
 
-def filterSortEntries(entries, select_entries, category):
+def filterSortEntries(entries, select_entries, category, runid):
 
     #TODO: sort by category / name
 
@@ -154,10 +154,17 @@ def filterSortEntries(entries, select_entries, category):
     #filtered_entries = []
     filtered_entries = dict()
 
+    DEBUG_MODE_FILTER=True
+    DEBUG_MODE_FILTER=False
+
     for key in entries.iterkeys():
         url=key
         entry=entries[key]
         name=entry['name']
+
+        e_runid=None
+        if (entry.get('runid')):
+            e_runid=entry['runid'].lower()
 
         e_category=None
         if (entry.get('category')):
@@ -172,15 +179,33 @@ def filterSortEntries(entries, select_entries, category):
                  enabled=True
 
         if (enabled == False):
+            if DEBUG_MODE_FILTER:
+                print "DISABLED: " + url
             continue
 
         if (select_entries and url.find(select_entries) == -1):
+            if DEBUG_MODE_FILTER:
+                print "SELECT_ENTRIES: " + select_entries + " not found " + url
             continue
 
         if category:
             if (e_category == None):
+                if DEBUG_MODE_FILTER:
+                    print "CATEGORY: " + category + ", no category in entry " + url
                 continue
             if (e_category != category):
+                if DEBUG_MODE_FILTER:
+                    print "CATEGORY: " + category + " != " + e_category + " category in entry " + url
+                continue
+
+        if runid:
+            if (e_runid == None):
+                if DEBUG_MODE_FILTER:
+                    print "RUNID: " + runid + ", no runid in entry " + url
+                continue
+            if (e_runid != runid.lower()):
+                if DEBUG_MODE_FILTER:
+                    print "RUNID: " + runid + " != " + e_runid + " runid in entry " + url
                 continue
 
         filtered_entries[url]=entry
@@ -255,6 +280,8 @@ def mkdirp(directory):
 
 def main_sendmail( entry, to, body, select_entries, category, period, name):
 
+    global runid
+
     try:
         body_bytes = len(body)
     except:
@@ -272,7 +299,7 @@ def main_sendmail( entry, to, body, select_entries, category, period, name):
         for key in entry.keys():
             entry_info = entry_info + "&nbsp;&nbsp;&nbsp;&nbsp;" + key + ": " + entry.get(key) + "<br>\n"
             
-        body = entry_info + "<br><br>" + body
+        body = entry_info + "<br>" + str(body_bytes) + " body bytes<br><br>" + body
 
         if ('mailto' in entry):
             to = [ entry['mailto'] ]
@@ -280,7 +307,10 @@ def main_sendmail( entry, to, body, select_entries, category, period, name):
         if ('mailto+' in entry):
             to.append( entry['mailto+'] )
 
-    subject='[' + periods.get(period) + ']: ' + name
+    if (runid == None):
+        runid=runids.get(period)
+
+    subject='[' + runid + ']: ' + name
 
     if (select_entries):
         subject = subject + '<' + select_entries + '> '
@@ -1106,6 +1136,8 @@ ofile='GLOBAL_OP.html'
 DIR0=None
 DIR1=None
 
+runid=None
+
 a=0
 while a < (len(args)-1):
     a=a+1
@@ -1119,6 +1151,16 @@ while a < (len(args)-1):
     if opt == "-c":
         a=a+1
         category=args[a]
+        continue
+
+    if opt == "-id":
+        a=a+1
+        runid=args[a]
+        continue
+
+    if opt == "-allid":
+        a=a+1
+        runid=None
         continue
 
     if opt == "-o":
@@ -1160,38 +1202,47 @@ while a < (len(args)-1):
 
     if opt == "-hour":
         period=HOUR
+        runid=runids[period]
         continue
 
     if opt == "-hour2":
         period=HOUR2
+        runid=runids[period]
         continue
 
     if opt == "-hour4":
         period=HOUR4
+        runid=runids[period]
         continue
 
     if opt == "-day":
         period=DAY
+        runid=runids[period]
         continue
 
     if opt == "-day2":
         period=DAY2
+        runid=runids[period]
         continue
 
     if opt == "-week":
         period=WEEK
+        runid=runids[period]
         continue
 
     if opt == "-week2":
         period=WEEK2
+        runid=runids[period]
         continue
 
     if opt == "-month":
         period=MONTH
+        runid=runids[period]
         continue
 
     if opt == "-month2":
         period=MONTH2
+        runid=runids[period]
         continue
 
     ########################################
@@ -1260,7 +1311,7 @@ if period == MONTH2:
 
 entries = readUrlList(ifile)
 
-entries = filterSortEntries(entries, select_entries, category)
+entries = filterSortEntries(entries, select_entries, category, runid)
 
 for oper in operations:
 
