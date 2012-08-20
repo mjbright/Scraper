@@ -3,9 +3,6 @@ Scraper
 
 Python-based Web Scraper script
 
-                               Scraper - README
-                             ====================
-
 Scraper is a Python-script to perform web scraping.
 
 The intended functionality is to monitor web-sites specified in a text-file,
