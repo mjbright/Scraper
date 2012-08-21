@@ -11,109 +11,123 @@ detecting changes and sending changes as fragments of HTML by e-mail.
 History:
 --------
 
-    2012-07-19: Creation of github archive
-                Checkin of first code version (needs to be cleaned up to be used by you ...!)
+2012-07-19: Creation of github archive
+	Checkin of first code version (needs to be cleaned up to be used by you ...!)
 
 FAQ:
 ----
 
-    - Why don't I just use an RSS reader for this?
-        - Many web pages of interest don't have an RSS feed
-        - I like to recieve notifications by e-mail not by other means
-        - I've never liked using RSS readers
-        - At some point maybe I'll allow other forms of notification
+- Why don't I just use an RSS reader for this?
+    - Many web pages of interest don't have an RSS feed
+    - I like to recieve notifications by e-mail not by other means
+    - I've never liked using RSS readers
+    - At some point maybe I'll allow other forms of notification
 
-    - Why reinvent the wheel?
-        - I needed a good example application to teach myself Python
-        - I didn't find the wheel I was looking for
+- Why reinvent the wheel?
+    - I needed a good example application to teach myself Python
+    - I didn't find the wheel I was looking for
 
 NOTES:
 ------
 
-    **UNICODE problems notes:**
-        http://stackoverflow.com/questions/492483/setting-the-correct-encoding-when-piping-stdout-in-python
-        A rule of thumb is: Always use unicode internally. decode what you receive, encode what you send.
+**UNICODE problems notes:**
+    http://stackoverflow.com/questions/492483/setting-the-correct-encoding-when-piping-stdout-in-python
+    A rule of thumb is: Always use unicode internally. decode what you receive, encode what you send.
 
 INSTALLATION:
 -------------
 
-    **Dependencies**
-        - Python
-           This software is currently developed using Python 2.7.3 (running on a Raspberry Pi => http://www.raspberrypi.org).
+**Dependencies**
 
-        - Beautiful Soup: (error tolerant) HTML parsing software
-           This software is currently developed using bs4
+  This software is currently developed and run using Python running under Debian "Wheezy"
+  (more precisely "Raspbian" running on a Raspberry Pi => http://www.raspberrypi.org).
 
-        - *Other Python modules?* (requests?)
+  It should have no problem running with most Unices and even under Windows.
 
-    **To install**
-        - Make sure you have Python, BeautifulSoup installed
+  - Python
+     This software is currently developed using Python 2.7.3
 
-        - Copy the *.py files to a suitable directory
+  - Beautiful Soup: (error tolerant) HTML parsing software
+     This software is currently developed using bs4
 
-        - Modify Scraper_Config.py to set the appropriate SMTP and SENDER parameters to be used for sending results e-mail
+  - *Other Python modules?* (requests?)
 
-        - Create your own LIST.txt listing sites to be scraped, use TEST_LIST.txt as an example
+**To install**
+  - Make sure you have Python, BeautifulSoup installed
+
+  - Copy the *.py files to a suitable directory
+
+  - Modify Scraper_Config.py to set the appropriate SMTP and SENDER parameters to be used for sending results e-mail
+
+  - Create your own LIST.txt listing sites to be scraped, use TEST_LIST.txt as an example
           See below for explanation of syntax.
 
 LIST SYNTAX:
 ------------
 
-    Each URL to be monitored has an entry of the form
-          Entry Title
-             tag1: value1
-             tag2: value2
-             tag3: value3
+Each URL to be monitored has an entry of the form
+  Entry Title
+     tag1: value1
+     tag2: value2
+     tag3: value3
 
-    Where the "Entry Title" appears at the beginning of a line, serving as a delimiter between entries
-    (it is also strongly recommended that a blank line appears before this title line for readability)
+Where the "Entry Title" appears at the beginning of a line, serving as a delimiter between entries
+(it is also strongly recommended that a blank line appears before this title line for readability)
 
-    The tag lines must be indented with spaces (arbitrary but at least 1).
+The tag lines must be indented with spaces (arbitrary but at least 1).
 
-    *Acceptable tags are the following:*
-        http, https - to specify the URL to be monitored
-                      In this case the "tag:value" pair represents the full URL, e.g. http://mysite.com
+*Acceptable tags are the following:*
+    - http, https - to specify the URL to be monitored
+      In this case the "tag:value" pair represents the full URL, e.g. http://mysite.com
 
-        root_<tag>_<attr> - to specify a subsection of the document to be treated
-                      By identifying that all useful content is contained within a <div id=content> tag for
-                      example, we can only interest ourselves in content within this tag.
-                      The line to specify this would be:
-                          root_div_id:content
+    - root_<tag>_<attr> - to specify a subsection of the document to be treated
+      By identifying that all useful content is contained within a <div id=content> tag for
+      example, we can only interest ourselves in content within this tag.
+      The line to specify this would be:
+            root_div_id:content
 
-                      This can allow to avoid unwanted sections of a page.
+      This can allow to avoid unwanted sections of a page.
 
-                      Currently we use only the first corresponding entry (as multiple matching tags may exist)
+      Currently we use only the first corresponding entry (as multiple matching tags may exist)
 
-                      If no root tag is specified then the whole <body> is used.
+      If no root tag is specified then the whole <body> is used.
 
-        runid - Used to specify the runid associated with this entry
-                      Typically the script will be run from cron with a specified period such as -week
-                      which automatically sets the runid to week
+    - runid - Used to specify the runid associated with this entry
+      Typically the script will be run from cron with a specified period such as -week
+      which automatically sets the runid to week
 
-                      A specific runid can also be set on the command-line using the -id argument.
+      A specific runid can also be set on the command-line using the -id argument.
 
-        filename_base - The software saves web pages, or the specified root section into a file with name
-                      based upon the specified URL.
-                      This option allows to specify another more readable base name for the file(s).
+    - filename_base - The software saves web pages, or the specified root section into a file
+      with name based upon the specified URL.
+      This option allows to specify another more readable base name for the file(s).
 
-        category - Arbitrary categories can be used to assign to entries
-                      These can be used to specify a subset of entries to treat using the "-c <category>" argument
+    - category - Arbitrary categories can be used to assign to entries
+      These can be used to specify a subset of entries to treat using the "-c <category>" argument
 
-        enabled - By default all entries are enabled, but they may be enabled/disabled by setting this
-                      value to true or false
+    - enabled - By default all entries are enabled, but they may be enabled/disabled by
+      setting this value to true or false
 
-        action - Default action to perform is to determine differences compared to a previous run
-                      Another action is possible 'email_selection' which sends the whole selection, not just differences
+    - parser - By default the Beautiful Soup default parser is used, but it is recommended
+      to specify a particular parser for each entry.
 
-        mailto - By default mails are sent to the SEND_TO address configured in Scraper_Config.py
-                      Alternatively, a different value can be set for a particular entry using this value.
+      Available parsers are 'html.parser', 'lxml', 'xml', 'html5lib'.
+      For more info please refer to the BeautifulSoup documentation here:
+        http://www.crummy.com/software/BeautifulSoup/bs4/doc/#specifying-the-parser-to-use
 
-        mailto+ - As mailto, but also sends mail to the SEND_TO address configured in Scraper_Config.py
+    - action - Default action to perform is to determine differences compared to a previous run.
+      Another action is possible 'email_selection' which sends the whole selection,
+      not just differences
 
-        proc - TODO
+    - mailto - By default mails are sent to the SEND_TO address configured in Scraper_Config.py
+      Alternatively, a different value can be set for a particular entry using this value.
 
-        when - TODO
+    - mailto+ - As mailto, but also sends mail to the SEND_TO address configured in
+      Scraper_Config.py
 
+    - proc - TODO
+
+    - when - TODO
 
 Running the scraper:
 --------------------
@@ -148,7 +162,10 @@ Running the scraper:
         For weekly checks:
             ./Scraper.py -week -get -diff -l FULL_LIST.txt
 
+Command-line invocations:
+------------------------
 
+    To be done later, in the meantime please refer to the following cron entries.
 
 Example crontab entries:
 ------------------------

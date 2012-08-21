@@ -572,6 +572,11 @@ while a < (len(args)-1):
         ifile=args[a]
         continue
 
+    if opt == "-parser":
+        a=a+1
+        Entry.Parser = args[a]
+        continue
+
     if opt == "-debug":
         DEBUG_MODE=True
         continue
@@ -654,6 +659,11 @@ while a < (len(args)-1):
 
     if opt == "-maili":
         SEND_MAIL_INDIVIDUAL=True
+        continue
+
+    if opt == "-nomail":
+        SEND_MAIL_INDIVIDUAL=False
+        SEND_MAIL_GLOBAL=False
         continue
 
     if opt == "-nomaili":

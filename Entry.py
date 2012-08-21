@@ -1,10 +1,15 @@
 
-import os
-import traceback
-import gzip # For check_file_not_gzipped()
+from bs4 import BeautifulSoup
+
+# optional parser:
+import html5lib
     
 import urllib2
 import difflib
+
+import os
+import traceback
+import gzip # For check_file_not_gzipped()
 
 #from Utils import *
 import Utils as u
@@ -14,6 +19,7 @@ import Utils as u
 class Entry:
     DEBUG_MODE=False
     globalRunID=None
+    Parser=None
 
     def __init__(self):
         self.fields = {}
@@ -146,11 +152,26 @@ class Entry:
         f.close()
     
         try:
-            soup = BeautifulSoup(text)
-            #soup = BeautifulSoup(open(file))
+            parser=Entry.Parser
+            if (self.get('parser')):
+                parser=self.get('parser')
+
+        
+            print "soup = BeautifulSoup(text, " + str(parser) +")"
+           
+	    if (parser == None):
+	        soup = BeautifulSoup(text)
+            else:
+                if (parser == "html5lib"):
+                    soup = BeautifulSoup(text, html5lib)
+                else:
+                    soup = BeautifulSoup(text, parser)
+
         except:
             print "ERROR: Failed to parse html file: " + file
-            return '<br> Failed to parse ' + file + '\n' + ''.join(open(file).readlines())
+            print traceback.format_exc()
+            #return '<br> Failed to parse ' + file + '\n' + ''.join(open(file).readlines())
+            return '<br> Failed to parse ' + file + '\n' + text
     
         try:
             print "Original encoding = " + str(soup.originalEncoding)
