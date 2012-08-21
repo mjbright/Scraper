@@ -110,6 +110,10 @@ def sendmail( entry, to, body, select_entries, category, period, name, runid):
 
     if (entry != None):
         entry_info ="<br><h3>Entry info:</h3>\n"
+        entry_info = entry_info + "&nbsp;&nbsp;&nbsp;&nbsp; <b>url</b>: "
+        entry_info = entry_info + "<a href='" + entry.url + "'> " + entry.url + "</a>"
+        entry_info = entry_info + "<br>\n"
+
         for key in entry.fields.keys():
             entry_info = entry_info + "&nbsp;&nbsp;&nbsp;&nbsp;" + key + ": " + entry.fields.get(key) + "<br>\n"
             
