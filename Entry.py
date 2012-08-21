@@ -45,7 +45,7 @@ class Entry:
     def createFileName(self):
 
         if (self.get('filename_base')):
-            return self.filename_base
+            return self.get('filename_base')
 
         file = self.url
         file = file.replace("http://", "")
