@@ -34,10 +34,6 @@ FMT_DATEHOUR=u.FMT_DATEHOUR
 DEBUG_MODE=False
 TEST_MODE=False
 
-print "Forcing TEST_MODE to True"
-TEST_MODE=True
-#Utils.TEST_MODE=True
-
 SAVE_ERRORS=list()
 
 ################################################################################
@@ -578,6 +574,11 @@ while a < (len(args)-1):
 
     if opt == "-debug":
         DEBUG_MODE=True
+        continue
+
+    if opt == "-test":
+        print "Setting TEST_MODE to True"
+        TEST_MODE=True
         continue
 
     if opt == "-local":
