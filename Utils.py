@@ -116,8 +116,12 @@ def sendmail( entry, to, body, select_entries, category, period, name, runid):
 
         for key in entry.fields.keys():
             entry_info = entry_info + "&nbsp;&nbsp;&nbsp;&nbsp;" + key + ": " + entry.fields.get(key) + "<br>\n"
+
+        debug_info_text=""
+        if (entry.dinfo):
+            debug_info_text = "<hr>" + entry.dinfo_text
             
-        body = entry_info + "<br>" + str(body_bytes) + " body bytes<br><br>" + body
+        body = entry_info + "<br>" + str(body_bytes) + " body bytes<br><br>" + debug_info_text + body
 
         if ('mailto' in entry.fields):
             to = [ entry.fields.mailto ]

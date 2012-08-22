@@ -17,12 +17,14 @@ import Utils as u
 #import unicodedata
 
 class Entry:
-    DEBUG_MODE=False
     globalRunID=None
     Parser=None
 
     def __init__(self):
         self.fields = {}
+        self.debug=False
+        self.dinfo=False
+        self.dinfo_text=""
 
     ################################################################################
     # get(self, field):
@@ -127,6 +129,55 @@ class Entry:
     
     
     ################################################################################
+    # def get_subtree_from_html(self, file, html, tag, attribute_name, attribute_value):
+
+    def get_subtree_from_html(self, file, html, tag, attribute_name, attribute_value):
+        value = None
+
+        entry_key = tag + "_" + attribute_name
+
+        search = "<" + tag + " " + attribute_name + "='" + attribute_value + "'>"
+        search_text = "&lt;" + tag + " " + attribute_name + "='" + attribute_value + "'&gt;"
+
+        #print "Getting content from root " + entry_key + "='" + attribute_value +"'"
+        print "Getting content from root " + search + " tag"
+
+        try:
+            attrs=dict()
+            attrs[attribute_name]=attribute_value
+
+            print "main = html.find_all(" + tag + ",  attrs={" + attribute_name + " : " + attribute_value + "})"
+            main = html.find_all(tag, attrs)
+            self.dinfo_text = self.dinfo_text + "MATCHED " + str(len(main)) + " element(s) for root '" + search_text + "' tag <br>\n"
+            print "MATCHED " + str(len(main)) + " element(s) for root '" + search + "' tag <br>\n"
+
+            if (len(main) > 1):
+                print "WARN: matched on more than 1 " + search + " tag"
+
+            if (len(main) == 0):
+                raise Exception("Not", " found")
+
+            #print repr(main)
+
+            contents=main[0].contents # Return contents of first match only
+            self.dinfo_text = self.dinfo_text + "MATCHED 1/" + str(len(main)) + " element(s) for root '" + search_text + "' tag [" + str(len(str(contents))) + " bytes]<br>\n"
+
+            if self.debug:
+                file = file + "." + entry_key + ".selection"
+                print "Writing selection file: " + file
+                u.writeFile(file, str(contents))
+
+            return contents
+
+        except:
+            self.dinfo_text = self.dinfo_text + "FAILED to match root '" + search_text + "' tag<br>\n"
+            print "ERROR: Failed to find root at " + search + " tag"
+            if self.debug:
+                print traceback.format_exc()
+                self.dinfo_text = self.dinfo_text + traceback.format_exc() + "<br>\n"
+            raise
+
+    ################################################################################
     # def parse_page(self, DIR):
     
     def parse_page(self, DIR):
@@ -183,6 +234,8 @@ class Entry:
         if (body == None):
             return ""
     
+        self.dinfo_text = self.dinfo_text + "<b> Searching in file '" + file + "'</b><br>\n"
+
         ############################################################
         ## Try first root_div_class, root_div_id entries if present:
     
@@ -195,15 +248,13 @@ class Entry:
                 attr=parts[2]
                 
                 try:
-                    print "0. TRY "+tag+" "+attr+" "+attr_val
-                    return get_subtree_from_html(file, body, tag, attr, attr_val)
+                    return self.get_subtree_from_html(file, body, tag, attr, attr_val)
                 except:
                     if (attr == "class"):
                         attr="id"
     
                     try:
-                        print "0(id). TRY "+tag+" "+attr+" "+attr_val
-                        return get_subtree_from_html(file, body, tag, attr, attr_val)
+                        return self.get_subtree_from_html(file, body, tag, attr, attr_val)
                     except:
                         pass
     
@@ -211,8 +262,7 @@ class Entry:
         if ('root_div_class' in self.fields):
             root_div_class = self.get('root_div_class')
             try:
-                print "1. NEVER HERE ... TRY div class " + root_div_class
-                return get_subtree_from_html(file, body, 'div', 'class', root_div_class)
+                return self.get_subtree_from_html(file, body, 'div', 'class', root_div_class)
             except:
                 if (not 'root_div_id' in self.fields):
                     print "Trying as 'root_div_id'"
@@ -223,8 +273,7 @@ class Entry:
             root_div_id = self.get('root_div_id')
     
             try:
-                print "2. NEVER HERE ... TRY div id " + root_div_id
-                return get_subtree_from_html(file, body, 'div', 'id', root_div_id)
+                return self.get_subtree_from_html(file, body, 'div', 'id', root_div_id)
             except:
                 pass
     
@@ -234,23 +283,21 @@ class Entry:
         if (not root_div_class == 'content'):
             root_div_class = 'content'
             try:
-                print "3. TRY div class " + root_div_class
-                return get_subtree_from_html(file, body, 'div', 'class', root_div_class)
+                return self.get_subtree_from_html(file, body, 'div', 'class', root_div_class)
             except:
                 pass
     
         if (not root_div_id == 'content'):
             root_div_id='content'
             try:
-                print "4. TRY div id " + root_div_id
-                return get_subtree_from_html(file, body, 'div', 'id', root_div_id)
+                return self.get_subtree_from_html(file, body, 'div', 'id', root_div_id)
             except:
                 pass
     
         ############################################################
         ## Then try body
         if (body):
-            print "Returning body.contents"
+            self.dinfo_text = self.dinfo_text + "Used full body<br>\n"
             return body.contents
     
         ############################################################
@@ -331,7 +378,7 @@ class Entry:
         diff_text = difflib.unified_diff(old_lines.split("\n"), new_lines.split("\n"))
         #print "   ==> "+str(len(diff))+" bytes different"
     
-        if Entry.DEBUG_MODE:
+        if self.debug:
             try:
                 #### file = NEW_DIR + "/" + self.createFileName() + ".diff"
                 print "Writing diff file: " + file
@@ -398,7 +445,7 @@ class Entry:
         if (page_diffs == ""):
             return ""
     
-        if Entry.DEBUG_MODE:
+        if self.debug:
             try:
                 file = NEW_DIR + "/" + self.createFileName() + ".diff.NEW"
                 print "Writing diff file: " + file

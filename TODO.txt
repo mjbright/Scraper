@@ -1,6 +1,8 @@
 
 TODO:
 
+   *** Add Mail throttling strategies ... if e-mail errors backoff ...
+
    NEXT:
     Complete README.md file with usage/install/configuration instructions
         Create an INSTALL.txt file

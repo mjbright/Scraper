@@ -78,52 +78,61 @@ The tag lines must be indented with spaces (arbitrary but at least 1).
 
 *Acceptable tags are the following:*
     - http, https - to specify the URL to be monitored
-      In this case the "tag:value" pair represents the full URL, e.g. http://mysite.com
+              In this case the "tag:value" pair represents the full URL, e.g. http://mysite.com
 
     - root_<tag>_<attr> - to specify a subsection of the document to be treated
-      By identifying that all useful content is contained within a <div id=content> tag for
-      example, we can only interest ourselves in content within this tag.
-      The line to specify this would be:
-            root_div_id:content
+              By identifying that all useful content is contained within a <div id=content> tag for
+              example, we can only interest ourselves in content within this tag.
+              The line to specify this would be:
+                    root_div_id:content
 
-      This can allow to avoid unwanted sections of a page.
+              This can allow to avoid unwanted sections of a page.
 
-      Currently we use only the first corresponding entry (as multiple matching tags may exist)
+              Currently we use only the first corresponding entry (as multiple matching tags may exist)
 
-      If no root tag is specified then the whole <body> is used.
+              If no root tag is specified then the whole <body> is used.
 
     - runid - Used to specify the runid associated with this entry
-      Typically the script will be run from cron with a specified period such as -week
-      which automatically sets the runid to week
+              Typically the script will be run from cron with a specified period such as -week
+              which automatically sets the runid to week
 
-      A specific runid can also be set on the command-line using the -id argument.
+              A specific runid can also be set on the command-line using the -id argument.
 
     - filename_base - The software saves web pages, or the specified root section into a file
-      with name based upon the specified URL.
-      This option allows to specify another more readable base name for the file(s).
+              with name based upon the specified URL.
+              This option allows to specify another more readable base name for the file(s).
 
     - category - Arbitrary categories can be used to assign to entries
-      These can be used to specify a subset of entries to treat using the "-c <category>" argument
+              These can be used to specify a subset of entries to treat using the "-c <category>" argument
 
     - enabled - By default all entries are enabled, but they may be enabled/disabled by
-      setting this value to true or false
+              setting this value to true or false
+
+    - debug - Set debug mode for this entry, overides global debug mode setting
+              Equivalent to -debug commd-line arg which sets global debug mode for all entries
+
+    - dinfo - Set dinfo mode for this entry, overides global dinfo mode setting
+              Equivalent to -dinfo commd-line arg which sets global dinfo mode for all entries
+
+              Setting dinfo mode allows to include debugging info in the result e-mails, e.g.
+              indicating if root_* entries were matched or not.
 
     - parser - By default the Beautiful Soup default parser is used, but it is recommended
-      to specify a particular parser for each entry.
+              to specify a particular parser for each entry.
 
-      Available parsers are 'html.parser', 'lxml', 'xml', 'html5lib'.
-      For more info please refer to the BeautifulSoup documentation here:
-        http://www.crummy.com/software/BeautifulSoup/bs4/doc/#specifying-the-parser-to-use
+              Available parsers are 'html.parser', 'lxml', 'xml', 'html5lib'.
+              For more info please refer to the BeautifulSoup documentation here:
+                http://www.crummy.com/software/BeautifulSoup/bs4/doc/#specifying-the-parser-to-use
 
     - action - Default action to perform is to determine differences compared to a previous run.
-      Another action is possible 'email_selection' which sends the whole selection,
-      not just differences
+              Another action is possible 'email_selection' which sends the whole selection,
+              not just differences
 
     - mailto - By default mails are sent to the SEND_TO address configured in Scraper_Config.py
-      Alternatively, a different value can be set for a particular entry using this value.
+              Alternatively, a different value can be set for a particular entry using this value.
 
     - mailto+ - As mailto, but also sends mail to the SEND_TO address configured in
-      Scraper_Config.py
+              Scraper_Config.py
 
     - proc - TODO
 

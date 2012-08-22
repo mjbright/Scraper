@@ -14,12 +14,6 @@ from Scraper_config import Scraper_config
 
 from Entry import Entry
 
-#from Utils import encode2Ascii
-#from Utils import readFile
-#from Utils import writeFile
-#from Utils import isAscii
-#from Utils import main_sendmail
-
 import Utils as u
 
 DATE=u.DATE
@@ -32,6 +26,7 @@ FMT_DATEHOUR=u.FMT_DATEHOUR
 ################################################################################
 
 DEBUG_MODE=False
+DEBUG_INFO=False
 TEST_MODE=False
 
 SAVE_ERRORS=list()
@@ -276,48 +271,6 @@ def parse_pages(entries, DIR):
         return entry.parse_page(DIR)
 
 ################################################################################
-# def get_subtree_from_html(file, html, tag, attribute_name, attribute_value):
-
-def get_subtree_from_html(file, html, tag, attribute_name, attribute_value):
-    value = None
-
-    entry_key = tag + "_" + attribute_name
-
-    search = "<" + tag + " " + attribute_name + "='" + attribute_value + "'>"
-
-    #print "Getting content from root " + entry_key + "='" + attribute_value +"'"
-    print "Getting content from root " + search + " tag"
-
-    try:
-        attrs=dict()
-        attrs[attribute_name]=attribute_value
-
-        print "main = html.find_all(" + tag + ",  attrs={" + attribute_name + " : " + attribute_value + "})"
-        main = html.find_all(tag, attrs)
-        if (len(main) > 1):
-            print "WARN: matched on more than 1 " + search + " tag"
-
-        if (len(main) == 0):
-            raise Exception("Not", " found")
-
-        #print repr(main)
-
-        contents=main[0].contents # Return contents of first match only
-
-        if DEBUG_MODE:
-            file = file + "." + entry_key + ".selection"
-            print "Writing selection file: " + file
-            u.writeFile(file, str(contents))
-
-        return contents
-
-    except:
-        print "ERROR: Failed to find root at " + search + " tag"
-        if DEBUG_MODE:
-            print traceback.format_exc()
-        raise
-
-################################################################################
 # def cleanText(text):
 
 def cleanText(text):
@@ -378,8 +331,10 @@ def readUrlList(filename):
 
     entry = Entry()
     entry.url=None
-    entry.DEBUG_MODE=DEBUG_MODE
-    entry.fields['name']='entry'+str(entry_no+1)
+    entry.name='entry'+str(entry_no)+'_line'+str(line_no)
+    entry.fields['name']='entry'+str(entry_no)+'_line'+str(line_no)
+    entry.debug=DEBUG_MODE
+    entry.dinfo=DEBUG_INFO
 
     for file_line in file_lines:
         line_no = line_no+1
@@ -413,19 +368,28 @@ def readUrlList(filename):
                 print "Entry already defined for url <"+url+"> in entry"+str(entry_no)+" ending at line "+str(line_no)
                 exit(-1)
 
+            if (entry.get('debug') and ((entry.get('debug').lower == "true") or (entry.get('debug').lower == "enabled"))):
+                entry.debug=True
+
+            if (entry.get('dinfo') and ((entry.get('dinfo').lower == "true") or (entry.get('dinfo').lower == "enabled"))):
+                entry.dinfo=True
+
             debug("Adding entry#"+str(entry_no))
             entries[url]=entry
             entry_no = entry_no+1
 
             entry = Entry()
             entry.url=None
-            entry.DEBUG_MODE=DEBUG_MODE
-            entry.fields['name']='entry'+str(entry_no)
+            entry.debug=DEBUG_MODE
+            entry.dinfo=DEBUG_INFO
+            entry.name='entry'+str(entry_no)+'_line'+str(line_no)
+            entry.fields['name']='entry'+str(entry_no)+'_line'+str(line_no)
             continue
 
         ########################################
         ## Detect title lines: (No spaces before line)
         if (file_line.find(" ") != 0): 
+            entry.fields['name']=file_line
             entry.name=file_line
             entries_started=True;
             continue
@@ -486,7 +450,7 @@ def diff_pages(entries, NEW_DIR, OLD_DIR):
 
             SAVE_ERRORS.append(full_error_header+full_error)
 
-            if DEBUG_MODE:
+            if entry.debug:
                 u.sendmail( entry, [ SEND_TO ], full_error, select_entries, category, period, "ERROR: " + name, runid)
 
         diff_pages = diff_pages + page
@@ -577,7 +541,13 @@ while a < (len(args)-1):
         Entry.Parser = args[a]
         continue
 
+    if opt == "-dinfo":
+        print "Setting DEBUG_INFO to True"
+        DEBUG_INFO=True
+        continue
+
     if opt == "-debug":
+        print "Setting DEBUG_MODE to True"
         DEBUG_MODE=True
         continue
 
