@@ -127,7 +127,8 @@ def sendmail( entry, to, body, select_entries, category, period, name, runid):
             to = [ entry.fields.mailto ]
 
         if ('mailto+' in entry.fields):
-            to.append( entry.fields.mailto )
+            #to.append( entry.fields.mailto )
+            to.append( entry.fields.get('mailto+') )
 
     if (runid == None):
         print "ERROR: in sendmail() runid is unset: " + traceback.format_exc()

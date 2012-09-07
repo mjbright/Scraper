@@ -148,7 +148,10 @@ class Entry:
 
             print "main = html.find_all(" + tag + ",  attrs={" + attribute_name + " : " + attribute_value + "})"
             main = html.find_all(tag, attrs)
-            self.dinfo_text = self.dinfo_text + "MATCHED " + str(len(main)) + " element(s) for root '" + search_text + "' tag <br>\n"
+
+            # Would be good "sometimes" to show failed matches also - for now only show actual MATCH:
+            if (len(main) > 0):
+                self.dinfo_text = self.dinfo_text + "MATCHED " + str(len(main)) + " element(s) for root '" + search_text + "' tag <br>\n"
             print "MATCHED " + str(len(main)) + " element(s) for root '" + search + "' tag <br>\n"
 
             if (len(main) > 1):
@@ -160,7 +163,7 @@ class Entry:
             #print repr(main)
 
             contents=main[0].contents # Return contents of first match only
-            self.dinfo_text = self.dinfo_text + "MATCHED 1/" + str(len(main)) + " element(s) for root '" + search_text + "' tag [" + str(len(str(contents))) + " bytes]<br>\n"
+            #self.dinfo_text = self.dinfo_text + "MATCHED 1/" + str(len(main)) + " element(s) for root '" + search_text + "' tag [" + str(len(str(contents))) + " bytes]<br>\n"
 
             if self.debug:
                 file = file + "." + entry_key + ".selection"
@@ -170,7 +173,7 @@ class Entry:
             return contents
 
         except:
-            self.dinfo_text = self.dinfo_text + "FAILED to match root '" + search_text + "' tag<br>\n"
+            #self.dinfo_text = self.dinfo_text + "FAILED to match root '" + search_text + "' tag<br>\n"
             print "ERROR: Failed to find root at " + search + " tag"
             if self.debug:
                 print traceback.format_exc()

@@ -1,5 +1,12 @@
 
 Scraper_config = {
+    # Parser to use:
+    'PARSER' : None,
+    #'PARSER' : 'html.parser',
+    #'PARSER' : 'lxml'
+    #'PARSER' : 'xml'
+    #'PARSER' : 'html5lib'
+
     # Put your e-mail address here:
     'SEND_TO'     : 'scraper@jean-dupont.net',
 
