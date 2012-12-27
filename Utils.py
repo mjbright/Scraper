@@ -109,7 +109,8 @@ def sendmail( entry, to, body, select_entries, category, period, name, runid):
         print "**** Sending mail as num bytes="+str(body_bytes)+">= min("+str(SEND_MAIL_MIN_BYTES)+") [" + name + "]"
 
     if (entry != None):
-        entry_info ="<br><h3>Entry info:</h3>\n"
+        #entry_info ="<br><h3>Entry info:</h3>\n"
+        entry_info ="<br><b>Entry info:</b>\n"
         entry_info = entry_info + "&nbsp;&nbsp;&nbsp;&nbsp; <b>url</b>: "
         entry_info = entry_info + "<a href='" + entry.url + "'> " + entry.url + "</a>"
         entry_info = entry_info + "<br>\n"
@@ -121,7 +122,8 @@ def sendmail( entry, to, body, select_entries, category, period, name, runid):
         if (entry.dinfo):
             debug_info_text = "<hr>" + entry.dinfo_text
             
-        body = entry_info + "<br>" + str(body_bytes) + " body bytes<br><br>" + debug_info_text + body
+        #body = entry_info + "<br>" + str(body_bytes) + " body bytes<br><br>" + debug_info_text + body
+        body = entry_info + str(body_bytes) + " body bytes<br>" + debug_info_text + body
 
         if ('mailto' in entry.fields):
             to = [ entry.fields.mailto ]

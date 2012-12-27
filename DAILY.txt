@@ -1,0 +1,10 @@
+
+Colissimo Suivi - Cadeau de Noel de Remy et Clara
+    http://www.colissimo.fr/portail_colissimo/suivre.do?language=fr_FR
+    post:parcelnumber=NUMERO_DE_SUIVI
+    root_div_id:leftColumn
+    category:Suivi
+    runid:day
+
+__END__
+

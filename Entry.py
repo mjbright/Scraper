@@ -4,7 +4,11 @@ from bs4 import BeautifulSoup
 # optional parser:
 import html5lib
     
-import urllib2
+# parser used by json2html
+import json
+
+import urllib  # For POST data encoding
+import urllib2 # For actual http GET/POST requests
 import difflib
 
 import os
@@ -85,9 +89,26 @@ class Entry:
         print "url:" + url
     
         try:
+
             opener = urllib2.build_opener()
             opener.addheaders = [('User-agent', ua)]
-            req = opener.open(url, timeout=30)
+
+            if (self.fields['post']):
+                #s= "Name1=Value1&Name2=Value2&Name3=Value3"
+                post=self.fields['post']
+                values = dict(item.split("=") for item in post.split("&"))
+                #dict(csv.reader([item], delimiter='=', quotechar="'").next() 
+                #for item in csv.reader([s], delimiter=';', quotechar="'").next())
+
+                print "POST("+str(values)+") "+url
+                data = urllib.urlencode(values)
+                req = opener.open(url, data, timeout=30)
+                #req = urllib2.Request(url, data)
+                #response = urllib2.urlopen(req)
+                #the_page = response.read()
+            else:
+                req = opener.open(url, timeout=30)
+
             #req = urllib2.urlopen(url, headers={'User-Agent' : ua})
     
             CHUNK = 16 * 1024
@@ -181,6 +202,56 @@ class Entry:
             raise
 
     ################################################################################
+    # def _json2html(self, text):
+
+    def _json2html(self, jsonStr, args=[]):
+
+        jsonObj = json.loads(jsonStr)
+
+        result = "<html>\n<title> Unknown </title>\n<body>\n"
+        result = result + "<table>\n"
+
+        items=0
+
+        for item in jsonObj:
+            items = items + 1
+            #print "Adding item "+str(items)
+	    result = result + "<tr>\n"
+
+            for key in item.keys():
+                if (args and (not key in args)):
+                    continue
+
+                result = result + "<td>"
+
+                try:
+                    value = u.encode2Ascii(item.get(key))
+                    result = result + "<pre>" + value + "</pre>"
+                except:
+                    result = result + "UNICODE_ERROR"
+
+                result = result + "</td>\n"
+
+	    result = result + "</tr>\n"
+           
+        result = result + "</table>\n"
+        result = result + "</body></html>\n"
+
+        #print "return result=>len:"+str(len(result))
+        return result
+   
+
+    ################################################################################
+    # def json2html(self, text):
+    
+    def json2html(self, jsonStr, args=[]):
+        try:
+            return self._json2html(jsonStr, args)
+        except:
+            print "Failed to parse json: " + traceback.format_exc()
+            return "Failed to parse json: " + traceback.format_exc()
+
+    ################################################################################
     # def parse_page(self, DIR):
     
     def parse_page(self, DIR):
@@ -206,10 +277,29 @@ class Entry:
         f.close()
     
         try:
+            if (self.get('parse')):
+                parse = self.get('parse')
+
+                if ("json" in parse):
+                    if (parse == "json"):
+                        text=self.json2html(text, [])
+                    else:
+                        #print "ARGS="+parse
+                        args=parse[5:-1].split(",")
+                        #print "args="+":".join(args)
+                        text=self.json2html(text,args)
+                        if (not text):
+                            print "NO TEXT"
+                            print "ERROR: Failed to parse json file: " + file
+                            text="text(Failed to parse json)"
+                        #else:
+                            #print "len(text)="+str(len(text))
+
+                    htmlfile = file + ".html"
+
             parser=Entry.Parser
             if (self.get('parser')):
                 parser=self.get('parser')
-
         
             print "soup = BeautifulSoup(text, " + str(parser) +")"
            
@@ -220,6 +310,8 @@ class Entry:
                     soup = BeautifulSoup(text, html5lib)
                 else:
                     soup = BeautifulSoup(text, parser)
+
+            #exit(0)
 
         except:
             print "ERROR: Failed to parse html file: " + file
@@ -237,7 +329,9 @@ class Entry:
         if (body == None):
             return ""
     
-        self.dinfo_text = self.dinfo_text + "<b> Searching in file '" + file + "'</b><br>\n"
+        #self.dinfo_text = self.dinfo_text + "<b> Searching in file '" + file + "'</b><br>\n"
+        # TODO: strip off /home/mjb/var/:
+        self.dinfo_text = self.dinfo_text + "<b> " + file + "</b><br>\n"
 
         ############################################################
         ## Try first root_div_class, root_div_id entries if present:
