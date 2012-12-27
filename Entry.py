@@ -92,8 +92,11 @@ class Entry:
 
             opener = urllib2.build_opener()
             opener.addheaders = [('User-agent', ua)]
+            #opener = urllib2.build_opener()
+            #opener.addheaders = [('User-agent', ua)]
+            #req = opener.open(url, timeout=30)
 
-            if (self.fields['post']):
+            if ('post' in self.fields):
                 #s= "Name1=Value1&Name2=Value2&Name3=Value3"
                 post=self.fields['post']
                 values = dict(item.split("=") for item in post.split("&"))
@@ -107,6 +110,7 @@ class Entry:
                 #response = urllib2.urlopen(req)
                 #the_page = response.read()
             else:
+                print "GET() "+url
                 req = opener.open(url, timeout=30)
 
             #req = urllib2.urlopen(url, headers={'User-Agent' : ua})
