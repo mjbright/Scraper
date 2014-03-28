@@ -98,9 +98,11 @@ def sendmail( entry, to, body, select_entries, category, period, name, runid):
 
     try:
         body_bytes = len(body)
+        lines=body.count('\n')
     except:
         body=""
         body_bytes = 0
+        lines=0
 
     if (body_bytes < SEND_MAIL_MIN_BYTES):
         print "**** Not sending mail as num bytes="+str(body_bytes)+"< min("+str(SEND_MAIL_MIN_BYTES)+") [" + name + "]"
@@ -126,7 +128,8 @@ def sendmail( entry, to, body, select_entries, category, period, name, runid):
         body = entry_info + str(body_bytes) + " body bytes<br>" + debug_info_text + body
 
         if ('mailto' in entry.fields):
-            to = [ entry.fields.mailto ]
+            #to = [ entry.fields.mailto ]
+            to = entry.fields.get('mailto')
 
         if ('mailto+' in entry.fields):
             #to.append( entry.fields.mailto )
@@ -137,7 +140,7 @@ def sendmail( entry, to, body, select_entries, category, period, name, runid):
         #runid=runids.get(period)
         runid="__NO_RUNID__"
 
-    subject='[' + runid + ']: ' + name
+    subject='[' + runid + ']<' + str(lines) + '>: ' + name
     if TEST_MODE:
         subject='[TEST_MODE]: ' + subject
 

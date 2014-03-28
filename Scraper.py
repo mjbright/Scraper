@@ -446,7 +446,8 @@ def diff_pages(entries, NEW_DIR, OLD_DIR):
             print error
 
             full_error= "<pre>" + traceback.format_exc() + "</pre>"
-            full_error_header="<b> Errors for '<u>"+name+"</u>'</b><br>"
+            #full_error_header="<b> Errors for '<u>"+name+"</u>'</b><br>"
+            full_error_header="<b> Errors for <u><a href='"+url+"'>'"+name+"'</a></u></b><br>"
 
             SAVE_ERRORS.append(full_error_header+full_error)
 
