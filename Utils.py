@@ -4,6 +4,13 @@ import unicodedata
 import socket
 import smtplib
 
+NLTK=False
+try:
+    import nltk
+    NLTK=True
+except ImportError:
+    print("No nltk module available")
+
 import traceback
 
 import datetime
@@ -99,11 +106,28 @@ def sendmail( entry, to, body, select_entries, category, period, name, runid):
 
     try:
         body_bytes = len(body)
-        body_lines=body.count('\n')
+        body_lines = body.count('\n')
+        body_info = "HTML TEXT: " 
+        body_info = body_info + \
+               str(body_bytes) + " body bytes &nbsp;&nbsp; " + \
+               str(body_lines) + " body lines<br>"
     except:
         body=""
+        body_info=""
         body_bytes = 0
         body_lines=0
+
+    if NLTK:
+        try:
+            text = nltk.clean_html(body) 
+            plain_bytes = len(text)
+            plain_lines = text.count('\n')
+            body_info = body_info + "PLAIN TEXT: " + \
+               str(plain_bytes) + " plain bytes &nbsp;&nbsp; " + \
+               str(plain_lines) + " plain lines<br>"
+        except:
+            print("Failed to calculate plaintext size using NLTK")
+
 
     if (body_bytes < SEND_MAIL_MIN_BYTES):
         print "**** Not sending mail as num bytes="+str(body_bytes)+"< min("+str(SEND_MAIL_MIN_BYTES)+") [" + name + "]"
@@ -132,10 +156,7 @@ def sendmail( entry, to, body, select_entries, category, period, name, runid):
             debug_info_text = "<hr>" + entry.dinfo_text
             
         #body = entry_info + "<br>" + str(body_bytes) + " body bytes<br><br>" + debug_info_text + body
-        body = entry_info + \
-               str(body_bytes) + " body bytes &nbsp;&nbsp; " + \
-               str(body_lines) + " body lines<br>" + \
-               debug_info_text + body
+        body = entry_info + body_info + debug_info_text + body
 
         if ('mailto' in entry.fields):
             #to = [ entry.fields.mailto ]
