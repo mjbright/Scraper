@@ -21,6 +21,7 @@ Scraper_config = {
 
     # If diffs to send are less than this number, don't send an e-mail, probably just junk: no need to change this
     'SEND_MAIL_MIN_BYTES'  : 30,
+    'SEND_MAIL_MIN_LINES'  : 1,
 
     # Send a separate e-mail of diffsfor each site: no need to change this
     'SEND_MAIL_INDIVIDUAL' : True,

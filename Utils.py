@@ -12,6 +12,7 @@ from datetime import date
 SENDER_EMAIL=None
 SENDER_NAME=None
 SEND_MAIL_MIN_BYTES=None
+SEND_MAIL_MIN_LINES=None
 
 TEST_MODE=False
 
@@ -98,17 +99,23 @@ def sendmail( entry, to, body, select_entries, category, period, name, runid):
 
     try:
         body_bytes = len(body)
-        lines=body.count('\n')
+        body_lines=body.count('\n')
     except:
         body=""
         body_bytes = 0
-        lines=0
+        body_lines=0
 
     if (body_bytes < SEND_MAIL_MIN_BYTES):
         print "**** Not sending mail as num bytes="+str(body_bytes)+"< min("+str(SEND_MAIL_MIN_BYTES)+") [" + name + "]"
         return
     else:
         print "**** Sending mail as num bytes="+str(body_bytes)+">= min("+str(SEND_MAIL_MIN_BYTES)+") [" + name + "]"
+
+    if (body_lines < SEND_MAIL_MIN_LINES):
+        print "**** Not sending mail as num lines="+str(body_lines)+"< min("+str(SEND_MAIL_MIN_LINES)+") [" + name + "]"
+        return
+    else:
+        print "**** Sending mail as num lines="+str(body_lines)+">= min("+str(SEND_MAIL_MIN_LINES)+") [" + name + "]"
 
     if (entry != None):
         #entry_info ="<br><h3>Entry info:</h3>\n"
@@ -125,7 +132,10 @@ def sendmail( entry, to, body, select_entries, category, period, name, runid):
             debug_info_text = "<hr>" + entry.dinfo_text
             
         #body = entry_info + "<br>" + str(body_bytes) + " body bytes<br><br>" + debug_info_text + body
-        body = entry_info + str(body_bytes) + " body bytes<br>" + debug_info_text + body
+        body = entry_info + \
+               str(body_bytes) + " body bytes &nbsp;&nbsp; " + \
+               str(body_lines) + " body lines<br>" + \
+               debug_info_text + body
 
         if ('mailto' in entry.fields):
             #to = [ entry.fields.mailto ]
@@ -140,7 +150,7 @@ def sendmail( entry, to, body, select_entries, category, period, name, runid):
         #runid=runids.get(period)
         runid="__NO_RUNID__"
 
-    subject='[' + runid + ']<' + str(lines) + '>: ' + name
+    subject='[' + runid + ']<' + str(body_bytes) + 'c, ' + str(body_lines) + 'l>: ' + name
     if TEST_MODE:
         subject='[TEST_MODE]: ' + subject
 
