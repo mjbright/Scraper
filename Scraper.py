@@ -46,6 +46,7 @@ category=None
 HOUR=1
 HOUR2=2
 HOUR4=4
+HOUR8=8
 
 DAY=10
 DAY2=20
@@ -61,6 +62,7 @@ runids = dict({
     HOUR:   'hour',
     HOUR2:  '2hour',
     HOUR4:  '4hour',
+    HOUR8:  '8hour',
     DAY:    'day',
     DAY2:   '2day',
     WEEK:   'week',
@@ -597,6 +599,11 @@ while a < (len(args)-1):
         runid=runids[period]
         continue
 
+    if opt == "-hour8":
+        period=HOUR8
+        runid=runids[period]
+        continue
+
     if opt == "-day":
         period=DAY
         runid=runids[period]
@@ -684,6 +691,10 @@ if period == HOUR2:
 if period == HOUR4:
     new_dir     = CACHE + DATEHOUR
     old_dir = CACHE + getTimeString(timedelta(hours=-4), FMT_DATEHOUR)
+
+if period == HOUR8:
+    new_dir     = CACHE + DATEHOUR
+    old_dir = CACHE + getTimeString(timedelta(hours=-8), FMT_DATEHOUR)
 
 if period == DAY:
     new_dir     = CACHE + DATE
