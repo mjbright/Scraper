@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import re
 import requests,sys,os
@@ -46,7 +46,6 @@ category=None
 HOUR=1
 HOUR2=2
 HOUR4=4
-HOUR8=8
 
 DAY=10
 DAY2=20
@@ -62,7 +61,6 @@ runids = dict({
     HOUR:   'hour',
     HOUR2:  '2hour',
     HOUR4:  '4hour',
-    HOUR8:  '8hour',
     DAY:    'day',
     DAY2:   '2day',
     WEEK:   'week',
@@ -78,6 +76,7 @@ runids = dict({
 EMAIL_CONFIG_KEYS=list({
     'SEND_TO', 'SENDER_EMAIL', 'SENDER_NAME', 'SMTP_HOST',
     'SEND_MAIL_MIN_BYTES', 'SEND_MAIL_MIN_LINES',
+    'SMTP_HOST_PWD_FILE', 'SMTP_HOST_USER_FILE',
     'SEND_MAIL_INDIVIDUAL', 'SEND_MAIL_GLOBAL',
     'SEND_ERROR_MAIL_INDIVIDUAL', 'SEND_ERROR_MAIL_GLOBAL',
     'SEND_MAIL_SUMMARY'
@@ -85,7 +84,7 @@ EMAIL_CONFIG_KEYS=list({
 
 for key in EMAIL_CONFIG_KEYS:
     if (not key in Scraper_config):
-        print "Entry for config item '" + key + "' is missing from Scraper_config"
+        print("Entry for config item '" + key + "' is missing from Scraper_config")
         exit(255)
 
 u.SENDER_EMAIL = Scraper_config['SENDER_EMAIL']
@@ -93,6 +92,8 @@ u.SENDER_NAME = Scraper_config['SENDER_NAME']
 u.SEND_MAIL_MIN_BYTES = Scraper_config['SEND_MAIL_MIN_BYTES']
 u.SEND_MAIL_MIN_LINES = Scraper_config['SEND_MAIL_MIN_LINES']
 u.SMTP_HOST = Scraper_config['SMTP_HOST']
+u.SMTP_HOST_PWD_FILE = Scraper_config['SMTP_HOST_PWD_FILE']
+u.SMTP_HOST_USER_FILE = Scraper_config['SMTP_HOST_USER_FILE']
 
 SEND_TO = Scraper_config['SEND_TO']
 SEND_MAIL_INDIVIDUAL = Scraper_config['SEND_MAIL_INDIVIDUAL']
@@ -104,13 +105,13 @@ SEND_MAIL_SUMMARY = Scraper_config['SEND_MAIL_SUMMARY']
 ################################################################################
 # debug(line):
 
-debug_flag=True
 debug_flag=False
+debug_flag=True
 debug_readUrlList=debug_flag
 
 def debug(line):
     if (debug_flag):
-        print "DEBUG: " + line
+        print("DEBUG: " + line)
 
 ###############################################################################
 # def getTimeString(tdelta, FMT):
@@ -130,8 +131,8 @@ def filterSortEntries(entries, select_entries, select_urls, category, runid):
     DEBUG_MODE_FILTER=True
     DEBUG_MODE_FILTER=False
 
-    #print "runid="+runid
-    for key in entries.iterkeys():
+    #print("runid="+runid)
+    for key in entries.keys():
         url=key
         entry=entries[key]
         name=entry.name
@@ -154,37 +155,37 @@ def filterSortEntries(entries, select_entries, select_urls, category, runid):
 
         if (enabled == False):
             if DEBUG_MODE_FILTER:
-                print "DISABLED: " + url
+                print("DISABLED: " + url)
             continue
 
         if (select_entries and name.lower().find(select_entries.lower()) == -1):
             if DEBUG_MODE_FILTER:
-                print "SELECT_ENTRIES: " + select_entries + " not found " + url
+                print("SELECT_ENTRIES: " + select_entries + " not found " + url)
             continue
 
         if (select_urls and url.lower().find(select_urls.lower()) == -1):
             if DEBUG_MODE_FILTER:
-                print "SELECT_URLS: " + select_urls + " not found " + url
+                print("SELECT_URLS: " + select_urls + " not found " + url)
             continue
 
         if category:
             if (e_category == None):
                 if DEBUG_MODE_FILTER:
-                    print "CATEGORY: " + category + ", no category in entry " + url
+                    print("CATEGORY: " + category + ", no category in entry " + url)
                 continue
             if (e_category != category):
                 if DEBUG_MODE_FILTER:
-                    print "CATEGORY: " + category + " != " + e_category + " category in entry " + url
+                    print("CATEGORY: " + category + " != " + e_category + " category in entry " + url)
                 continue
 
         if runid:
             if (e_runid == None):
                 if DEBUG_MODE_FILTER:
-                    print "RUNID: " + runid + ", no runid in entry " + url
+                    print("RUNID: " + runid + ", no runid in entry " + url)
                 continue
             if (e_runid != runid.lower()):
                 if DEBUG_MODE_FILTER:
-                    print "RUNID: " + runid + " != " + e_runid + " runid in entry " + url
+                    print("RUNID: " + runid + " != " + e_runid + " runid in entry " + url)
                 continue
 
         filtered_entries[url]=entry
@@ -192,7 +193,7 @@ def filterSortEntries(entries, select_entries, select_urls, category, runid):
     num_entries=len(entries)
     num_filtered_entries=len(filtered_entries)
     if (num_entries != num_filtered_entries):
-        print "filterEntries returned "+str(num_filtered_entries)+" from initial " + str(num_entries) + " entries"
+        print("filterEntries returned "+str(num_filtered_entries)+" from initial " + str(num_entries) + " entries")
 
     return filtered_entries
 
@@ -226,7 +227,7 @@ def hexdump(src, start=0, count=-1, length=16):
 # def printBuffer(label, buffer, start, count):
 
 def printBuffer(label, buffer, start, count):
-    print label + "\n" + hexdump(buffer, start, count, 16)
+    print(label + "\n" + hexdump(buffer, start, count, 16))
 
 
 ################################################################################
@@ -243,16 +244,16 @@ def get_pages(entries, DOWNLOAD_DIR):
 
     mkdirp(DOWNLOAD_DIR)
 
-    for key in entries.iterkeys():
+    for key in entries.keys():
         url=key
         entry=entries[key]
         name=entry.name
-        print "\nGET: " + name + " => <" + url + ">"
+        print("\nGET: " + name + " => <" + url + ">")
 
         try:
             entry.get_page(DOWNLOAD_DIR)
         except:
-            print "\n**** UNCAUGHT EXCEPTION on get_page(): " + traceback.format_exc()
+            print("\n**** UNCAUGHT EXCEPTION on get_page(): " + traceback.format_exc())
 
 ################################################################################
 # getUrlId(url):
@@ -268,9 +269,9 @@ def getUrlId(url):
 # parse_pages(entries, DIR):
 
 def parse_pages(entries, DIR):
-    for url in entries.iterkeys():
+    for url in entries.keys():
         name=entry.name
-        print name + " => <" + url + ">"
+        print(name + " => <" + url + ">")
 
         return entry.parse_page(DIR)
 
@@ -284,7 +285,7 @@ def cleanText(text):
     linepos=0
     return u.encode2Ascii(text)
 
-    print "cleantext("+str(len(text))+" bytes)"
+    print("cleantext("+str(len(text))+" bytes)")
 
     for byte in text:
         by = by + 1
@@ -296,7 +297,7 @@ def cleanText(text):
         linepos = linepos + 1
         if (ord(byte) > 128):
             hexstr=strformat("0x%x", ord(byte))
-            print "Found big number " + hexstr +" at by " + by + " at line"+line+"@"+linepos
+            print("Found big number " + hexstr +" at by " + by + " at line"+line+"@"+linepos)
             byte=' '
 
         text = text + byte
@@ -308,6 +309,7 @@ def cleanText(text):
 
 def readUrlList(filename):
     debug_flag=debug_readUrlList
+    print(f"reading url list from file {filename}")
 
     file_lines = u.readFile(filename)
 
@@ -340,6 +342,7 @@ def readUrlList(filename):
     entry.debug=DEBUG_MODE
     entry.dinfo=DEBUG_INFO
 
+    skip_until_empty_lines=False
     for file_line in file_lines:
         line_no = line_no+1
         debug("LINE"+str(line_no)+": "+file_line)
@@ -353,7 +356,11 @@ def readUrlList(filename):
         ## Empty lines delimit entries:
         if (p_empty.match(file_line) or p_end.match(file_line)):
             url = entry.url
-            #print "END OF ENTRY"
+            #print("END OF ENTRY")
+
+            if skip_until_empty_lines:
+                debug("IGNORING lines after error")
+                continue
 
             # Ignore if empty-line before 1st entry:
             if (p_empty.match(file_line) and (not entries_started)):
@@ -365,12 +372,17 @@ def readUrlList(filename):
 
             if (url == None):
                 continue
-                #print "No url defined for entry"+str(entry_no)+" ending at line "+str(line_no)
+                #print("No url defined for entry"+str(entry_no)+" ending at line "+str(line_no))
                 #exit(-1)
 
             if (url in entries):
-                print "Entry already defined for url <"+url+"> in entry"+str(entry_no)+" ending at line "+str(line_no)
-                exit(-1)
+                full_error = "Entry already defined for url <{}> in entry <{}> ending at line {}".format(url, str(entry_no), str(line_no))
+                u.sendmail( entry, [ SEND_TO ], full_error, [], category, period, "ERROR: Duplicate url", runid)
+
+                # skip rest of entry lines:
+                skip_until_empty_lines=True
+                continue
+                #exit(-1)
 
             if (entry.get('debug') and ((entry.get('debug').lower == "true") or (entry.get('debug').lower == "enabled"))):
                 entry.debug=True
@@ -389,6 +401,8 @@ def readUrlList(filename):
             entry.name='entry'+str(entry_no)+'_line'+str(line_no)
             entry.fields['name']='entry'+str(entry_no)+'_line'+str(line_no)
             continue
+
+        skip_until_empty_lines=False
 
         ########################################
         ## Detect title lines: (No spaces before line)
@@ -426,11 +440,11 @@ def diff_pages(entries, NEW_DIR, OLD_DIR):
 
     diff_pages = ""
 
-    for url in entries.iterkeys():
+    for url in entries.keys():
         entry=entries[url]
         name=entry.name
-        print 40 * '_'
-        print "\nDIFF: " + name + " => <" + url + ">"
+        print(40 * '_')
+        print("\nDIFF: " + name + " => <" + url + ">")
 
         classId=getUrlId(url)
 
@@ -447,15 +461,16 @@ def diff_pages(entries, NEW_DIR, OLD_DIR):
             page = entry.diff_page(classId, NEW_DIR, OLD_DIR, email_attrs)
         except:
             error = "ERROR: on diff_page("+url+")" + traceback.format_exc()
-            print error
+            print(error)
 
             full_error= "<pre>" + traceback.format_exc() + "</pre>"
-            #full_error_header="<b> Errors for '<u>"+name+"</u>'</b><br>"
-            full_error_header="<b> Errors for <u><a href='"+url+"'>'"+name+"'</a></u></b><br>"
+            full_error_header="<b> Errors for '<u>"+name+"</u>'</b><br>"
 
             SAVE_ERRORS.append(full_error_header+full_error)
 
             if entry.debug:
+                TEST='just testing'
+                u.sendmail( entry, [ 'mjbrightfr@gmail.com' ], TEST, [], 'category', 'period', TEST, 'runid')
                 u.sendmail( entry, [ SEND_TO ], full_error, select_entries, category, period, "ERROR: " + name, runid)
 
         diff_pages = diff_pages + page
@@ -467,26 +482,35 @@ def diff_pages(entries, NEW_DIR, OLD_DIR):
 
 def showlist(entries):
 
-    print "\nEntries: " + str(len(entries)) + " entries (filtered)"
+    print("\nEntries: " + str(len(entries)) + " entries (filtered)")
 
-    for key in entries.iterkeys():
+    for key in entries.keys():
         url=key
         value=entries[key]
         name=value.name
-        print name + " => <" + url + ">"
+        print(name + " => <" + url + ">")
 
-    print "\nFinished list of " + str(len(entries)) + " entries (filtered)"
-
-    print ""
+    print("\nFinished list of " + str(len(entries)) + " entries (filtered)")
+    print
 
 ################################################################################
 # CMD-LINE ARGS:
 
+# FOR DEBUGGING:
+TEXT=u.readFile("/etc/hosts")
+
+'''
+FORCE TEST sendmail:
+  entry=Entry()
+  entry.url='url'
+  u.sendmail( entry, [ 'mjbrightfr@gmail.com' ], TEXT, [], 'category', 'period', TEXT, 'runid')
+'''
+
 args=sys.argv
 
-print 80 * '_'
-print "Programe started at: " + u.DATETIME + " as:"
-print ' '.join(args)
+print(80 * '_')
+print("Programe started at: " + u.DATETIME + " as:")
+print(' '.join(args))
 
 
 ifile='LIST.txt'
@@ -547,17 +571,17 @@ while a < (len(args)-1):
         continue
 
     if opt == "-dinfo":
-        print "Setting DEBUG_INFO to True"
+        print("Setting DEBUG_INFO to True")
         DEBUG_INFO=True
         continue
 
     if opt == "-debug":
-        print "Setting DEBUG_MODE to True"
+        print("Setting DEBUG_MODE to True")
         DEBUG_MODE=True
         continue
 
     if opt == "-test":
-        print "Setting TEST_MODE to True"
+        print("Setting TEST_MODE to True")
         TEST_MODE=True
         continue
 
@@ -596,11 +620,6 @@ while a < (len(args)-1):
 
     if opt == "-hour4":
         period=HOUR4
-        runid=runids[period]
-        continue
-
-    if opt == "-hour8":
-        period=HOUR8
         runid=runids[period]
         continue
 
@@ -658,7 +677,7 @@ while a < (len(args)-1):
         SEND_MAIL_GLOBAL=False
         continue
 
-    print "Unknown option '"+opt+"'"
+    print("Unknown option '"+opt+"'")
     exit(255)
 
 ################################################################################
@@ -691,10 +710,6 @@ if period == HOUR2:
 if period == HOUR4:
     new_dir     = CACHE + DATEHOUR
     old_dir = CACHE + getTimeString(timedelta(hours=-4), FMT_DATEHOUR)
-
-if period == HOUR8:
-    new_dir     = CACHE + DATEHOUR
-    old_dir = CACHE + getTimeString(timedelta(hours=-8), FMT_DATEHOUR)
 
 if period == DAY:
     new_dir     = CACHE + DATE
@@ -731,7 +746,7 @@ for oper in operations:
 
     if (oper == "get_pages"):
         if (not os.path.exists(new_dir)):
-            print "os.makedirs("+new_dir+")"
+            print("os.makedirs("+new_dir+")")
             os.makedirs(new_dir)
 
         get_pages(entries, new_dir)

@@ -38,11 +38,20 @@ def encode2Ascii(lines):
     ret=""
 
     if (str(type(lines)) == "<type 'str'>"):
-        #print "STR"
+        #print("STR")
         return lines
 
-    #return lines.encode('ascii','ignore')
-    text = unicodedata.normalize('NFKD', lines).encode('ascii','ignore')
+    #    return lines
+    try:
+        return lines.encode('ascii','ignore')
+    except:
+         return lines
+
+    try:
+        text = unicodedata.normalize('NFKD', lines).encode('ascii','ignore')
+    except:
+        text = unicodedata.normalize('NFKD', lines).encode('utf-8','ignore')
+
     return text
 
     ret = ''
@@ -85,7 +94,7 @@ def writeFile(filename, text):
             file.write(text)
 
     except:
-        print "ERROR: in writeFile("+filename+"):" + traceback.format_exc()
+        print("ERROR: in writeFile("+filename+"):" + traceback.format_exc())
         raise
 
 ################################################################################
@@ -103,43 +112,71 @@ def isAscii(mystring):
 # def sendmail( entry, to, body, select_entries, category, period, name, runid):
 
 def sendmail( entry, to, body, select_entries, category, period, name, runid):
+    print(f"sendmail( {entry}, {to}, {body}, {select_entries}, {category}, {period}, {name}, {runid})")
+
+    print(f"type(body)={type(body)}") # <class 'bytes'>
+    if str(type(body)) == "<class 'bytes'>":
+        body=body.decode('ascii','ignore')
+        print(f"AFTER decode('ascii'): type(body)={type(body)}")
 
     try:
-        body_bytes = len(body)
-        body_lines = body.count('\n')
-        body_info = "HTML TEXT: " 
+        body=''.join(body)
+        print("len")
+        num_body_bytes = len(str(body))
+        print("count")
+        num_body_lines = body.count('\n')
+    except:
+        print("join failed")
+        num_body_bytes=0
+        num_body_lines=0
+
+    try:
+        print("-----------------------------------------------------------------------------------")
+        #print(f"str(body)={str(body)}")
+        #print("-----------------------------------------------------------------------------------")
+        print(f"num_body_bytes={num_body_bytes}")
+        print(f"num_body_lines={num_body_lines}")
+        print("body_info")
+        body_info = "HTML TEXT: "
+        print("body_info+")
         body_info = body_info + \
-               str(body_bytes) + " body bytes &nbsp;&nbsp; " + \
-               str(body_lines) + " body lines<br>"
+            str(num_body_bytes) + " body bytes &nbsp;&nbsp; " + \
+            str(num_body_lines) + " body lines<br>"
+        print("OK")
     except:
         body=""
         body_info=""
-        body_bytes = 0
-        body_lines=0
+        num_body_bytes = 0
+        num_body_lines=0
 
-    if NLTK:
-        try:
-            text = nltk.clean_html(body) 
-            plain_bytes = len(text)
-            plain_lines = text.count('\n')
-            body_info = body_info + "PLAIN TEXT: " + \
-               str(plain_bytes) + " plain bytes &nbsp;&nbsp; " + \
-               str(plain_lines) + " plain lines<br>"
-        except:
-            print("Failed to calculate plaintext size using NLTK")
+        if NLTK:
+            try:
+                text = nltk.clean_html(body)
+                plain_bytes = len(text)
+                plain_lines = text.count('\n')
+                body_info = body_info + "PLAIN TEXT: " + \
+                    str(plain_bytes) + " plain bytes &nbsp;&nbsp; " + \
+                    str(plain_lines) + " plain lines<br>"
+            except:
+                print("Failed to calculate plaintext size using NLTK")
 
-
-    if (body_bytes < SEND_MAIL_MIN_BYTES):
-        print "**** Not sending mail as num bytes="+str(body_bytes)+"< min("+str(SEND_MAIL_MIN_BYTES)+") [" + name + "]"
+    if (num_body_bytes < SEND_MAIL_MIN_BYTES):
+        print(f"{type(name)}=>{name}")
+        print(f"{type(num_body_bytes)}=>{num_body_bytes}")
+        print(f"{type(SEND_MAIL_MIN_BYTES)}=>{SEND_MAIL_MIN_BYTES}")
+        #print("**** Not sending mail as num bytes="+str(num_body_bytes)+"< min("+str(SEND_MAIL_MIN_BYTES)+") [" + name + "]")
+        print(f"**** Not sending mail as num bytes={num_body_bytes} < min({SEND_MAIL_MIN_BYTES}) [{name}]")
         return
     else:
-        print "**** Sending mail as num bytes="+str(body_bytes)+">= min("+str(SEND_MAIL_MIN_BYTES)+") [" + name + "]"
+        #print("**** Sending mail as num bytes="+str(num_body_bytes)+">= min("+str(SEND_MAIL_MIN_BYTES)+") [" + name + "]")
+        print(f"**** Sending mail as num bytes={num_body_bytes} >= min({SEND_MAIL_MIN_BYTES}) [{name}]")
 
-    if (body_lines < SEND_MAIL_MIN_LINES):
-        print "**** Not sending mail as num lines="+str(body_lines)+"< min("+str(SEND_MAIL_MIN_LINES)+") [" + name + "]"
+    print(f"SEND_MAIL_MIN_LINES={SEND_MAIL_MIN_LINES}")
+    if (num_body_lines < SEND_MAIL_MIN_LINES):
+        print(f"**** Not sending mail as num lines={num_body_lines} < min({SEND_MAIL_MIN_LINES} ) [{name}]")
         return
     else:
-        print "**** Sending mail as num lines="+str(body_lines)+">= min("+str(SEND_MAIL_MIN_LINES)+") [" + name + "]"
+        print(f"**** Sending mail as num lines={num_body_lines} >= min({SEND_MAIL_MIN_LINES} ) [{name}]")
 
     if (entry != None):
         #entry_info ="<br><h3>Entry info:</h3>\n"
@@ -155,7 +192,7 @@ def sendmail( entry, to, body, select_entries, category, period, name, runid):
         if (entry.dinfo):
             debug_info_text = "<hr>" + entry.dinfo_text
             
-        #body = entry_info + "<br>" + str(body_bytes) + " body bytes<br><br>" + debug_info_text + body
+        #body = entry_info + "<br>" + str(num_body_bytes) + " body bytes<br><br>" + debug_info_text + body
         body = entry_info + body_info + debug_info_text + body
 
         if ('mailto' in entry.fields):
@@ -167,11 +204,11 @@ def sendmail( entry, to, body, select_entries, category, period, name, runid):
             to.append( entry.fields.get('mailto+') )
 
     if (runid == None):
-        print "ERROR: in sendmail() runid is unset: " + traceback.format_exc()
+        print("ERROR: in sendmail() runid is unset: " + traceback.format_exc())
         #runid=runids.get(period)
         runid="__NO_RUNID__"
 
-    subject='[' + runid + ']<' + str(body_bytes) + 'c, ' + str(body_lines) + 'l>: ' + name
+    subject=f'[{runid}]<{num_body_bytes}c, {num_body_lines}l>: {name}'
     if TEST_MODE:
         subject='[TEST_MODE]: ' + subject
 
@@ -196,9 +233,9 @@ def _sendmail(to, headers, body, subject="Scraper"):
     sender=SENDER_EMAIL
     sender_name=SENDER_NAME
 
-    #print "SENDER_EMAIL=" + SENDER_EMAIL
-    #print "sender="+sender
-    #print "sender_name="+sender_name
+    print("SENDER_EMAIL=" + SENDER_EMAIL)
+    print("sender="+sender)
+    print("sender_name="+sender_name)
 
     message = "From: " + sender_name
     message = message + " <"+sender+">\n" + "To: "
@@ -210,14 +247,39 @@ def _sendmail(to, headers, body, subject="Scraper"):
 
     message = message + "\n\n" + body
 
-    body_bytes = len(body)
-    by = "[ with " + str(body_bytes) + " bytes]"
+    num_body_bytes = len(body)
+    by = "[ with " + str(num_body_bytes) + " bytes]"
+
+    #sender = 'from@mjbright.net'
+    #receivers = ['mjbrightfr@gmail.com']
+
+    PWD=None
+    USER=None
+    if SMTP_HOST_PWD_FILE:  PWD=readFile(SMTP_HOST_PWD_FILE)[0].strip()
+    if SMTP_HOST_USER_FILE: USER=readFile(SMTP_HOST_USER_FILE)[0].strip()
+    print(f"PWD={PWD} USER={USER}")
 
     try:
-       smtpObj = smtplib.SMTP(SMTP_HOST)
-       smtpObj.sendmail(sender, to, message)
-       print "**** Sent email to <" + ' '.join(to) + "> " + by + " " + subject
-
+       if PWD:
+           s = smtplib.SMTP('smtp.gmail.com', 587)
+           s.set_debuglevel(2)
+           s.starttls()
+           s.ehlo()
+       else:
+           s = smtplib.SMTP(SMTP_HOST)
     except smtplib.SMTPException:
-       print "**** Error: unable to send email" + by + " " + subject
+       print(f"**** Error: unable to connect to smtp host {SMTP_HOST}")
+
+    if PWD:
+        try:
+            s.login(USER, PWD)
+        except smtplib.SMTPException:
+           print(f"**** Error: unable to login({USER}, {PWD}) to smtp host {SMTP_HOST}")
+
+    try:
+       s.sendmail(sender, to, message)
+       print("**** Sent email to <" + ' '.join(to) + "> " + by + " " + subject)
+    except smtplib.SMTPException:
+       print("**** Error: unable to send email" + by + " " + subject)
+
 
