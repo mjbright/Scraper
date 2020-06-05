@@ -14,7 +14,7 @@ Scraper_config = {
     'SMTP_HOST' : 'smtp.provider.fr',
 
     # USER credentials for smtp provider stored in files
-    'SMTP_HOST_USER_FILE' : '/home/ubuntu/.CREDENTIALS/mail.app.raw',
+    'SMTP_HOST_USER_FILE' : '/home/ubuntu/.CREDENTIALS/mail.user.raw',
     'SMTP_HOST_PWD_FILE' : '/home/ubuntu/.CREDENTIALS/mail.app.raw',
 
     # Put the desired sender e-mail address here: no need to change this
